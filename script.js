@@ -24,53 +24,108 @@ const ADMIN_CONFIG = {
    tool every time it's used. Hand edits here are fine, but will be
    overwritten the next time someone saves new defaults from the page. === */
 const DEFAULTS = {
-  volume: {
-    baseVolume: 30,          // month 1-3 visits (Q1 rate) — FREE INPUT, see UI note
-    quarterlyGrowth: 0.3,    // step-wise quarterly growth
-    capacityPerDayPerTeam: 7, // reference only, NOT used in the formulas
-    teams: 1,
-    // Which of the 12 months the team is actually operating. Unchecking a
-    // month (e.g. Tet/a holiday closure, or a ramp-up month with no revenue
-    // yet) sets that month's visits to 0. Fixed overhead and staff cost still
-    // apply (salaried staff are still paid). Default: M1 (too early to have
-    // revenue yet) and M6 are closed.
-    monthActive: [false, true, true, true, true, false, true, true, true, true, true, true]
-  },
-  revenue: {
-    examFeePrimary: 20,
-    pCompanion: 0.2,
-    examFeeCompanion: 12,
-    cvr: 0.85,
-    mix: [
-      { label: "Standard frame glasses + Atropine", share: 0.30, price: 52 },
-      { label: "Myopia-control frame glasses — $120 tier (~VND 3M)", share: 0.49, price: 120 },
-      { label: "Myopia-control frame glasses — $280 tier (~VND 7M)", share: 0.21, price: 280 }
+  "volume": {
+    "baseVolume": 30,
+    "quarterlyGrowth": 0.3,
+    "capacityPerDayPerTeam": 7,
+    "teams": 1,
+    "monthActive": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
     ]
   },
-  costRates: {
-    outreachByQuarter: [0.60, 0.5333, 0.4667, 0.40],
-    logisticsPerVisit: 4,
-    cogsPct: 0.45
+  "revenue": {
+    "examFeePrimary": 20,
+    "pCompanion": 0.2,
+    "examFeeCompanion": 12,
+    "cvr": 0.85,
+    "mix": [
+      {
+        "label": "Standard frame glasses + Atropine",
+        "share": 0.3,
+        "price": 52
+      },
+      {
+        "label": "Myopia-control frame glasses — $120 tier (~VND 3M)",
+        "share": 0.49,
+        "price": 120
+      },
+      {
+        "label": "Myopia-control frame glasses — $280 tier (~VND 7M)",
+        "share": 0.21,
+        "price": 280
+      }
+    ]
   },
-  fixedOverhead: [
-    { label: "Warehouse/office", amount: 1000 },
-    { label: "Utilities/Internet", amount: 500 }
-  ],
-  headcount: [
-    { role: "Ophthalmologist (home visits)", count: 1, rate: 1000 },
-    { role: "Refraction technician (accompanying)", count: 1, rate: 600 },
-    { role: "Customer Care / Ops / Scheduling", count: 1, rate: 600 }
-  ],
-  scenario: {
-    conservativeAdj: -0.30,
-    optimisticAdj: 0.30
+  "costRates": {
+    "outreachByQuarter": [
+      0.6,
+      0.5333,
+      0.4667,
+      0.4
+    ],
+    "logisticsPerVisit": 4,
+    "cogsPct": 0.45
   },
-  capital: {
-    totalInvestment: 200000,
-    capexItems: [
-      { label: "Equipment (2 exam kits + computers/phones)", amount: 50000, month: 1 },
-      { label: "Booking software/app — phase 1", amount: 15000, month: 1 },
-      { label: "Booking software/app — phase 2", amount: 15000, month: 6 }
+  "fixedOverhead": [
+    {
+      "label": "Warehouse/office",
+      "amount": 1000
+    },
+    {
+      "label": "Utilities/Internet",
+      "amount": 500
+    }
+  ],
+  "headcount": [
+    {
+      "role": "Ophthalmologist (home visits)",
+      "count": 1,
+      "rate": 1000
+    },
+    {
+      "role": "Refraction technician (accompanying)",
+      "count": 1,
+      "rate": 600
+    },
+    {
+      "role": "Customer Care / Ops / Scheduling",
+      "count": 1,
+      "rate": 600
+    }
+  ],
+  "scenario": {
+    "conservativeAdj": -0.3,
+    "optimisticAdj": 0.3
+  },
+  "capital": {
+    "totalInvestment": 200000,
+    "capexItems": [
+      {
+        "label": "Equipment (2 exam kits + computers/phones)",
+        "amount": 50000,
+        "month": 1
+      },
+      {
+        "label": "Booking software/app — phase 1",
+        "amount": 15000,
+        "month": 1
+      },
+      {
+        "label": "Booking software/app — phase 2",
+        "amount": 15000,
+        "month": 6
+      }
     ]
   }
 };
