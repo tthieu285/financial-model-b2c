@@ -485,8 +485,10 @@ html, body {
 
 .pie-legend li {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
-  gap: 8px;
+  column-gap: 8px;
+  row-gap: 2px;
   font-size: 12.5px;
   padding: 6px 0;
   border-bottom: 1px solid var(--gridline);
@@ -501,12 +503,27 @@ html, body {
   margin-top: 3px;
 }
 
+/* Fixed minimum so this never gets squeezed to near-zero by its nowrap
+   siblings on narrow layouts (e.g. zoomed-in browsers) — without a floor,
+   overflow-wrap:break-word will happily wrap every single word onto its
+   own line once the flex row runs out of room. */
 .pie-legend .name {
-  flex: 1 1 auto;
+  flex: 1 1 110px;
+  min-width: 110px;
   color: var(--text-secondary);
   white-space: normal;
   overflow-wrap: break-word;
   line-height: 1.35;
+}
+
+/* Amount + percentage travel together as one unit. If they don't fit on
+   the same line as the name, the whole pair wraps to its own line below
+   (indented to line up under the name text) instead of squeezing name. */
+.pie-legend .stats {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+  margin-left: 18px; /* swatch width (10px) + its gap (8px) */
 }
 
 .pie-legend .amt {

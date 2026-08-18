@@ -555,8 +555,10 @@ function renderRevenueMixChart(model) {
       <li>
         <span class="swatch" style="background:${color}"></span>
         <span class="name">${escapeHtml(item.label)}</span>
-        <span class="amt">${fmtUSD(item.value)}</span>
-        <span class="pct">${(item.pct * 100).toFixed(1)}%</span>
+        <span class="stats">
+          <span class="amt">${fmtUSD(item.value)}</span>
+          <span class="pct">${(item.pct * 100).toFixed(1)}%</span>
+        </span>
       </li>
     `);
   });
