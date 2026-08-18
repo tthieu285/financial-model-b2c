@@ -26,7 +26,7 @@ const ADMIN_CONFIG = {
 const DEFAULTS = {
   "volume": {
     "baseVolume": 30,
-    "quarterlyGrowth": 0.3,
+    "quarterlyGrowth": 0.5,
     "capacityPerDayPerTeam": 7,
     "teams": 1,
     "monthActive": [
