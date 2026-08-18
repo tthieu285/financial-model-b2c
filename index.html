@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>God's Eyes · Financial Model — B2C Homecare (Children)</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="page-header">
+  <div class="header-inner">
+    <h1>God's Eyes · Financial Model</h1>
+    <p class="subtitle">B2C Homecare (Children) · Year 1 projection · All inputs editable · Updates live</p>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- Scenario tabs -->
+  <section class="scenario-tabs" role="tablist" aria-label="Choose scenario">
+    <button class="scenario-btn" data-scenario="conservative" role="tab">Conservative</button>
+    <button class="scenario-btn active" data-scenario="base" role="tab" aria-selected="true">Base Case</button>
+    <button class="scenario-btn" data-scenario="optimistic" role="tab">Optimistic</button>
+  </section>
+
+  <!-- KPI cards -->
+  <section class="kpi-grid" id="kpiGrid"></section>
+
+  <!-- Charts -->
+  <section class="charts-grid">
+    <div class="chart-card">
+      <h3>Revenue & EBITDA by Month</h3>
+      <div class="chart-legend">
+        <span><span class="dot" style="background:var(--series-1)"></span>Revenue</span>
+        <span><span class="dot" style="background:var(--series-2)"></span>EBITDA</span>
+      </div>
+      <div id="chartRevenueEbitda"></div>
+    </div>
+    <div class="chart-card">
+      <h3>Year 1 Revenue Mix</h3>
+      <div id="chartRevenueMix"></div>
+    </div>
+  </section>
+
+  <!-- Monthly table -->
+  <section class="table-card">
+    <h3>Monthly P&amp;L — Year 1</h3>
+    <div class="table-scroll">
+      <table id="monthlyTable">
+        <thead id="monthlyTableHead"></thead>
+        <tbody id="monthlyTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Cumulative cash balance — full width, below the monthly rollout table -->
+  <section class="chart-card chart-card-wide">
+    <h3>Cumulative Cash Balance</h3>
+    <div class="chart-legend">
+      <span><span class="dot" style="background:var(--series-1)"></span>Month-end cash</span>
+    </div>
+    <div id="chartCash"></div>
+  </section>
+
+  <!-- Assumptions (all inputs — kept at the bottom, matching the B2B layout) -->
+  <section class="assumptions-panel">
+    <div class="assumptions-header-row">
+      <button class="assumptions-toggle" id="assumptionsToggle" aria-expanded="false">
+        <span class="chevron">▶</span> Assumptions
+      </button>
+      <button class="reset-btn" id="resetDefaultsBtn" type="button">↺ Reset to defaults</button>
+    </div>
+    <div class="assumptions-body" id="assumptionsBody" style="display:none;">
+
+      <!-- A. Volume & growth -->
+      <div class="assump-block">
+        <h3>A. Visit Volume & Growth</h3>
+        <div class="field-grid">
+          <div class="field">
+            <label for="volBase">Base visits (Months 1–3 rate)</label>
+            <input type="number" id="volBase" step="1">
+            <span class="field-note">Freely editable — see note below. (Month 1 itself is closed by default — see Active Months.)</span>
+          </div>
+          <div class="field">
+            <label for="volGrowth">Quarterly growth (%)</label>
+            <input type="number" id="volGrowth" step="0.1">
+          </div>
+          <div class="field">
+            <label for="volCapacity">Capacity cap (visits/day/team) — reference only</label>
+            <input type="number" id="volCapacity" step="1">
+            <span class="field-note">Not used in the calculations — for reference only.</span>
+          </div>
+          <div class="field">
+            <label for="volTeams">Number of teams</label>
+            <input type="number" id="volTeams" step="1">
+            <span class="field-note">Not used in the calculations — for reference only.</span>
+          </div>
+        </div>
+        <h3 style="margin-top:16px;">Active Months</h3>
+        <div class="month-toggle-grid" id="monthActiveGrid"></div>
+        <span class="field-note">Click a month to mark it closed (e.g. Tet or another holiday) — that month's visits drop to 0. Fixed overhead and staff cost still apply, since salaried staff are still paid during the closure.</span>
+      </div>
+
+      <!-- B. Revenue per visit -->
+      <div class="assump-block">
+        <h3>B. Revenue per Visit (single exam type)</h3>
+        <div class="field-grid">
+          <div class="field">
+            <label for="examFeePrimary">Primary exam fee ($/visit)</label>
+            <input type="number" id="examFeePrimary" step="0.1">
+          </div>
+          <div class="field">
+            <label for="pCompanion">Probability of a companion (%)</label>
+            <input type="number" id="pCompanion" step="0.1">
+          </div>
+          <div class="field">
+            <label for="examFeeCompanion">Companion fee ($/person)</label>
+            <input type="number" id="examFeeCompanion" step="0.1">
+          </div>
+          <div class="field">
+            <label for="cvr">Conversion rate to treatment — CVR (%)</label>
+            <input type="number" id="cvr" step="0.1">
+          </div>
+        </div>
+
+        <h3 style="margin-top:16px;">Treatment / Glasses Mix (when indicated)</h3>
+        <table class="dyn-table" id="mixTable">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th class="col-share">Share (%)</th>
+              <th class="col-price">Price ($)</th>
+              <th class="col-remove"></th>
+            </tr>
+          </thead>
+          <tbody id="mixRows"></tbody>
+        </table>
+        <button class="add-row-btn" id="addMixRow" type="button">+ Add treatment type</button>
+        <div class="mix-total-row" id="mixTotalRow"></div>
+
+        <div class="rev-boxes" id="revBoxes"></div>
+      </div>
+
+      <!-- C. Variable cost rates -->
+      <div class="assump-block">
+        <h3>C. Variable Cost Rates</h3>
+        <div class="field-grid">
+          <div class="field">
+            <label for="outreachQ1">Outreach/Marketing Q1 (% of revenue)</label>
+            <input type="number" id="outreachQ1" step="0.01">
+          </div>
+          <div class="field">
+            <label for="outreachQ2">Outreach/Marketing Q2 (% of revenue)</label>
+            <input type="number" id="outreachQ2" step="0.01">
+          </div>
+          <div class="field">
+            <label for="outreachQ3">Outreach/Marketing Q3 (% of revenue)</label>
+            <input type="number" id="outreachQ3" step="0.01">
+          </div>
+          <div class="field">
+            <label for="outreachQ4">Outreach/Marketing Q4 (% of revenue)</label>
+            <input type="number" id="outreachQ4" step="0.01">
+          </div>
+          <div class="field">
+            <label for="logisticsPerVisit">Logistics ($/visit)</label>
+            <input type="number" id="logisticsPerVisit" step="0.1">
+          </div>
+          <div class="field">
+            <label for="cogsPct">COGS (% of treatment revenue)</label>
+            <input type="number" id="cogsPct" step="0.1">
+          </div>
+        </div>
+      </div>
+
+      <!-- D. Fixed overhead -->
+      <div class="assump-block">
+        <h3>D. Monthly Fixed Overhead</h3>
+        <table class="dyn-table" id="fixedOverheadTable">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th class="col-amount">$/month</th>
+              <th class="col-remove"></th>
+            </tr>
+          </thead>
+          <tbody id="fixedOverheadRows"></tbody>
+        </table>
+        <button class="add-row-btn" id="addFixedOverheadRow" type="button">+ Add overhead item</button>
+        <div class="mix-total-row">Total fixed overhead/month: <span id="fixedTotalDisplay">—</span></div>
+      </div>
+
+      <!-- E. Headcount -->
+      <div class="assump-block">
+        <h3>E. Headcount</h3>
+        <table class="dyn-table" id="headcountTable">
+          <thead>
+            <tr>
+              <th>Role</th>
+              <th class="col-count">Count</th>
+              <th class="col-rate">$/month/person</th>
+              <th class="col-amount">Total $/month</th>
+              <th class="col-remove"></th>
+            </tr>
+          </thead>
+          <tbody id="headcountRows"></tbody>
+        </table>
+        <button class="add-row-btn" id="addHeadcountRow" type="button">+ Add role</button>
+        <div class="mix-total-row">Total staff cost/month: <span id="staffTotalDisplay">—</span></div>
+      </div>
+
+      <!-- F. Scenario multipliers -->
+      <div class="assump-block">
+        <h3>F. Scenario Adjustments (applied to visit volume)</h3>
+        <div class="field-grid">
+          <div class="field">
+            <label for="conservativeAdj">Conservative adjustment (%)</label>
+            <input type="number" id="conservativeAdj" step="1">
+          </div>
+          <div class="field">
+            <label for="optimisticAdj">Optimistic adjustment (%)</label>
+            <input type="number" id="optimisticAdj" step="1">
+          </div>
+        </div>
+        <span class="field-note">Applied only to visit volume — pricing, CVR, mix, staffing, and overhead stay the same across all 3 scenarios.</span>
+      </div>
+
+      <!-- G. Capital & CapEx -->
+      <div class="assump-block">
+        <h3>G. Capital & CapEx</h3>
+        <div class="field-grid">
+          <div class="field">
+            <label for="totalInvestment">Total initial investment ($)</label>
+            <input type="number" id="totalInvestment" step="1000">
+          </div>
+        </div>
+
+        <h3 style="margin-top:16px;">CapEx Schedule</h3>
+        <table class="dyn-table" id="capexTable">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th class="col-amount">Amount ($)</th>
+              <th class="col-month">Month #</th>
+              <th class="col-remove"></th>
+            </tr>
+          </thead>
+          <tbody id="capexRows"></tbody>
+        </table>
+        <button class="add-row-btn" id="addCapexRow" type="button">+ Add CapEx item</button>
+        <div class="mix-total-row">Total Year 1 CapEx: <span id="capexTotalDisplay">—</span></div>
+      </div>
+
+      <!-- H. Admin — Save as Default -->
+      <div class="assump-block">
+        <h3>H. Admin — Save as Default</h3>
+
+        <div id="adminLockedView">
+          <span class="field-note">PIN-gated (soft deterrent only — see note below). Enter the PIN to show the save-to-GitHub controls.</span>
+          <div class="field-grid" style="margin-top:10px;">
+            <div class="field">
+              <label for="adminPinInput">Admin PIN</label>
+              <input type="password" id="adminPinInput" inputmode="numeric" autocomplete="off">
+            </div>
+          </div>
+          <button class="add-row-btn" id="adminUnlockBtn" type="button" style="margin-top:10px;">Unlock Admin</button>
+          <div class="admin-status" id="adminUnlockStatus"></div>
+        </div>
+
+        <div id="adminUnlockedView" style="display:none;">
+          <span class="field-note">Saving writes the current values of every input on this page as the new defaults, by committing an updated <code>script.js</code> straight to your GitHub repo.</span>
+          <div class="field-grid" style="margin-top:10px;">
+            <div class="field">
+              <label for="adminOwner">GitHub owner/org</label>
+              <input type="text" id="adminOwner" autocomplete="off" placeholder="e.g. tthieu285">
+            </div>
+            <div class="field">
+              <label for="adminRepo">Repository</label>
+              <input type="text" id="adminRepo" autocomplete="off" placeholder="e.g. financial-model-b2c">
+            </div>
+            <div class="field">
+              <label for="adminBranch">Branch</label>
+              <input type="text" id="adminBranch" autocomplete="off" placeholder="main">
+            </div>
+            <div class="field">
+              <label for="adminPath">File path</label>
+              <input type="text" id="adminPath" autocomplete="off" placeholder="script.js">
+            </div>
+          </div>
+          <div class="field-grid" style="margin-top:10px;">
+            <div class="field" style="grid-column: 1 / -1;">
+              <label for="adminPat">GitHub Personal Access Token</label>
+              <input type="password" id="adminPat" autocomplete="off" placeholder="ghp_… or github_pat_…">
+              <span class="field-note">Sent directly from your browser to GitHub's API — never stored, never sent anywhere else. Use a fine-grained PAT scoped to just this repo's Contents (read/write) if possible. Owner/Repo/Branch/Path above are remembered on this browser (not sensitive); the PAT itself is not.</span>
+            </div>
+          </div>
+          <div style="margin-top:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <button class="add-row-btn" id="adminSaveBtn" type="button">Save as Default</button>
+            <button class="reset-btn" id="adminLockBtn" type="button">Lock Admin</button>
+          </div>
+          <div class="admin-status" id="adminSaveStatus"></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <footer class="page-footer">
+    <p>
+      Official reference for cross-checking figures: the Excel file <code>gods_eyes_b2c_tre_em_financial_model.xlsx</code> —
+      if this page and the Excel ever disagree, flag it for review rather than assuming either one is correct.<br>
+      CVR and the treatment mix are experience-based estimates, not yet validated by a real pilot — kept as easily editable inputs.
+    </p>
+  </footer>
+
+</main>
+
+<script src="script.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
