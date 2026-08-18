@@ -25,7 +25,7 @@ const ADMIN_CONFIG = {
    overwritten the next time someone saves new defaults from the page. === */
 const DEFAULTS = {
   "volume": {
-    "baseVolume": 30,
+    "baseVolume": 45,
     "quarterlyGrowth": 0.5,
     "capacityPerDayPerTeam": 7,
     "teams": 1,
