@@ -173,27 +173,27 @@ function renderMixRows() {
 }
 
 function headcountRowTotalText(row) {
-  const isVisit = row.basis === "visit";
-  return isVisit
-    ? fmtUSD(Number(row.count || 0) * Number(row.visitRate || 0), 2) + "/visit"
+  const isExam = row.basis === "exam";
+  return isExam
+    ? fmtUSD(Number(row.count || 0) * Number(row.examRate || 0), 2) + "/exam"
     : fmtUSD(Number(row.count || 0) * Number(row.monthlyRate || 0)) + "/mo";
 }
 
 function renderHeadcountRows() {
   const tbody = document.getElementById("headcountRows");
   tbody.innerHTML = state.headcount.map((row, i) => {
-    const isVisit = row.basis === "visit";
-    const rateField = isVisit ? "visitRate" : "monthlyRate";
-    const rateValue = isVisit ? row.visitRate : row.monthlyRate;
+    const isExam = row.basis === "exam";
+    const rateField = isExam ? "examRate" : "monthlyRate";
+    const rateValue = isExam ? row.examRate : row.monthlyRate;
     return `
     <tr>
       <td><input type="text" data-list="headcount" data-index="${i}" data-field="role" value="${escapeHtml(row.role)}"></td>
-      <td class="col-basis-check"><input type="checkbox" data-list="headcount" data-index="${i}" data-field="basis" ${isVisit ? "checked" : ""} title="Ticked = paid per visit performed. Unticked = fixed monthly salary."></td>
+      <td class="col-basis-check"><input type="checkbox" data-list="headcount" data-index="${i}" data-field="basis" ${isExam ? "checked" : ""} title="Ticked = paid per child examined (a visit with a companion counts as 2 exams). Unticked = fixed monthly salary."></td>
       <td class="col-count"><input type="number" step="1" data-list="headcount" data-index="${i}" data-field="count" value="${roundForInput(row.count)}"></td>
       <td class="col-rate">
         <div class="rate-cell">
-          <input type="number" step="${isVisit ? "0.1" : "10"}" data-list="headcount" data-index="${i}" data-field="${rateField}" value="${roundForInput(rateValue)}">
-          <span class="rate-unit">${isVisit ? "$/visit" : "$/month"}</span>
+          <input type="number" step="${isExam ? "0.1" : "10"}" data-list="headcount" data-index="${i}" data-field="${rateField}" value="${roundForInput(rateValue)}">
+          <span class="rate-unit">${isExam ? "$/exam" : "$/month"}</span>
         </div>
       </td>
       <td class="col-amount" id="hcTotal-${i}">${headcountRowTotalText(row)}</td>
@@ -253,10 +253,10 @@ function bindDynamicTableEvents() {
     if (!arr || !arr[idx]) return;
 
     // The headcount "basis" checkbox swaps which rate field (monthlyRate vs
-    // visitRate) is shown/editable for that row, so it needs a full
+    // examRate) is shown/editable for that row, so it needs a full
     // re-render rather than just patching a value in place.
     if (t.type === "checkbox") {
-      arr[idx][field] = t.checked ? "visit" : "month";
+      arr[idx][field] = t.checked ? "exam" : "month";
       if (list === "headcount") renderHeadcountRows();
       recalcAndRender();
       return;
@@ -297,7 +297,7 @@ function bindDynamicTableEvents() {
     recalcAndRender();
   });
   document.getElementById("addHeadcountRow").addEventListener("click", () => {
-    state.headcount.push({ role: "New role", count: 1, basis: "month", monthlyRate: 0, visitRate: 0 });
+    state.headcount.push({ role: "New role", count: 1, basis: "month", monthlyRate: 0, examRate: 0 });
     renderHeadcountRows();
     recalcAndRender();
   });
@@ -356,14 +356,14 @@ function updateFixedTotalDisplay() {
   document.getElementById("fixedTotalDisplay").textContent = fmtUSD(total);
 }
 function updateStaffTotalDisplay() {
-  let fixedTotal = 0, visitTotal = 0;
+  let fixedTotal = 0, examTotal = 0;
   state.headcount.forEach(row => {
-    if (row.basis === "visit") visitTotal += Number(row.count || 0) * Number(row.visitRate || 0);
+    if (row.basis === "exam") examTotal += Number(row.count || 0) * Number(row.examRate || 0);
     else fixedTotal += Number(row.count || 0) * Number(row.monthlyRate || 0);
   });
   const parts = [];
   parts.push(fmtUSD(fixedTotal) + "/mo fixed");
-  if (visitTotal > 0) parts.push(fmtUSD(visitTotal, 2) + "/visit combined stipend");
+  if (examTotal > 0) parts.push(fmtUSD(examTotal, 2) + "/exam combined stipend");
   document.getElementById("staffTotalDisplay").textContent = parts.join(" + ");
 }
 function updateCapexTotalDisplay() {
