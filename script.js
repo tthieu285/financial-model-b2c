@@ -23,7 +23,7 @@ const ADMIN_CONFIG = {
    overwritten the next time someone saves new defaults from the page. === */
 const DEFAULTS = {
   "volume": {
-    "baseVolume": 15,
+    "baseVolume": 10,
     "quarterlyGrowth": 0.5,
     "capacityPerDayPerTeam": 7,
     "teams": 1,
@@ -44,7 +44,7 @@ const DEFAULTS = {
   },
   "revenue": {
     "examFeePrimary": 30,
-    "pCompanion": 0.2,
+    "pCompanion": 0.3,
     "examFeeCompanion": 15,
     "cvr": 0.85,
     "mix": [
@@ -128,7 +128,7 @@ const DEFAULTS = {
     "capexItems": [
       {
         "label": "Equipment (2 exam kits)",
-        "amount": 30000,
+        "amount": 40000,
         "month": 1
       },
       {
