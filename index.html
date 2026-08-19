@@ -142,26 +142,14 @@
         <div class="rev-boxes" id="revBoxes"></div>
       </div>
 
-      <!-- C. Variable cost rates -->
+      <!-- C. Marketing budget & variable cost rates -->
       <div class="assump-block">
-        <h3>C. Variable Cost Rates</h3>
+        <h3>C. Marketing Budget & Variable Cost Rates</h3>
+        <div class="month-budget-grid" id="marketingMonthlyGrid"></div>
+        <span class="field-note">Fixed $ schedule, one free input per month — not tied to revenue or visit volume, and NOT zeroed out by Active Months (branding/market-education spend keeps running even during a closed/holiday month). Default: $10k/mo for the first 3 months, $5k/mo from month 4 on — adjust any month freely.</span>
+
+        <h3 style="margin-top:16px;">Other Variable Cost Rates</h3>
         <div class="field-grid">
-          <div class="field">
-            <label for="outreachQ1">Outreach/Marketing Q1 (% of revenue)</label>
-            <input type="number" id="outreachQ1" step="0.01">
-          </div>
-          <div class="field">
-            <label for="outreachQ2">Outreach/Marketing Q2 (% of revenue)</label>
-            <input type="number" id="outreachQ2" step="0.01">
-          </div>
-          <div class="field">
-            <label for="outreachQ3">Outreach/Marketing Q3 (% of revenue)</label>
-            <input type="number" id="outreachQ3" step="0.01">
-          </div>
-          <div class="field">
-            <label for="outreachQ4">Outreach/Marketing Q4 (% of revenue)</label>
-            <input type="number" id="outreachQ4" step="0.01">
-          </div>
           <div class="field">
             <label for="logisticsPerVisit">Logistics ($/visit)</label>
             <input type="number" id="logisticsPerVisit" step="0.1">
@@ -197,16 +185,18 @@
           <thead>
             <tr>
               <th>Role</th>
+              <th class="col-basis-check">Per-visit?</th>
               <th class="col-count">Count</th>
-              <th class="col-rate">$/month/person</th>
-              <th class="col-amount">Total $/month</th>
+              <th class="col-rate">Rate</th>
+              <th class="col-amount">Total</th>
               <th class="col-remove"></th>
             </tr>
           </thead>
           <tbody id="headcountRows"></tbody>
         </table>
         <button class="add-row-btn" id="addHeadcountRow" type="button">+ Add role</button>
-        <div class="mix-total-row">Total staff cost/month: <span id="staffTotalDisplay">—</span></div>
+        <span class="field-note">Tick "Per-visit?" for roles already salaried elsewhere (e.g. shared with Alina) — their cost becomes a stipend that scales with visits performed that month, instead of a fixed monthly salary. Each row remembers both rates, so toggling back and forth doesn't lose what you typed.</span>
+        <div class="mix-total-row">Staff cost: <span id="staffTotalDisplay">—</span></div>
       </div>
 
       <!-- F. Scenario multipliers -->

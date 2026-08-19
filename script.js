@@ -2,9 +2,7 @@
    God's Eyes · Financial Model — B2C Homecare (Children)
    The full calculation engine + rendering + interaction lives in this one file.
    Every input on the page is freely editable — no input is locked or
-   auto-derived from another input. "Base volume" is just a plain number
-   field, with a note explaining where the number came from (see the note
-   box in the HTML).
+   auto-derived from another input.
    ============================================================================ */
 
 /* ---------------------------------------------------------------------------
@@ -24,108 +22,66 @@ const ADMIN_CONFIG = {
    tool every time it's used. Hand edits here are fine, but will be
    overwritten the next time someone saves new defaults from the page. === */
 const DEFAULTS = {
-  "volume": {
-    "baseVolume": 45,
-    "quarterlyGrowth": 0.5,
-    "capacityPerDayPerTeam": 7,
-    "teams": 1,
-    "monthActive": [
-      false,
-      true,
-      true,
-      true,
-      true,
-      false,
-      true,
-      true,
-      true,
-      true,
-      true,
-      true
+  volume: {
+    baseVolume: 30,          // month 1-3 visits (Q1 rate) — FREE INPUT, see UI note
+    quarterlyGrowth: 0.3,    // step-wise quarterly growth
+    capacityPerDayPerTeam: 7, // reference only, NOT used in the formulas
+    teams: 1,
+    // Which of the 12 months the team is actually operating. Unchecking a
+    // month (e.g. Tet/a holiday closure, or a ramp-up month with no revenue
+    // yet) sets that month's visits to 0. Fixed overhead and staff cost still
+    // apply (salaried staff are still paid). Default: M1 (too early to have
+    // revenue yet) and M6 are closed.
+    monthActive: [false, true, true, true, true, false, true, true, true, true, true, true]
+  },
+  revenue: {
+    examFeePrimary: 20,
+    pCompanion: 0.2,
+    examFeeCompanion: 12,
+    cvr: 0.85,
+    mix: [
+      { label: "Standard frame glasses + Atropine", share: 0.30, price: 52 },
+      { label: "Myopia-control frame glasses — $120 tier (~VND 3M)", share: 0.49, price: 120 },
+      { label: "Myopia-control frame glasses — $280 tier (~VND 7M)", share: 0.21, price: 280 }
     ]
   },
-  "revenue": {
-    "examFeePrimary": 20,
-    "pCompanion": 0.2,
-    "examFeeCompanion": 12,
-    "cvr": 0.85,
-    "mix": [
-      {
-        "label": "Standard frame glasses + Atropine",
-        "share": 0.3,
-        "price": 52
-      },
-      {
-        "label": "Myopia-control frame glasses — $120 tier (~VND 3M)",
-        "share": 0.49,
-        "price": 120
-      },
-      {
-        "label": "Myopia-control frame glasses — $280 tier (~VND 7M)",
-        "share": 0.21,
-        "price": 280
-      }
-    ]
+  // Fixed $ schedule, one editable field per month — NOT a % of revenue,
+  // and NOT zeroed out by Active Months (branding/market-education spend
+  // keeps running even during a closed/holiday month). Default: $10k/mo
+  // for the first 3 months (branding push), $5k/mo from month 4 on —
+  // every month is its own free input, this is just the starting point.
+  marketing: {
+    monthlyBudget: [10000, 10000, 10000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000]
   },
-  "costRates": {
-    "outreachByQuarter": [
-      0.6,
-      0.5333,
-      0.4667,
-      0.4
-    ],
-    "logisticsPerVisit": 4,
-    "cogsPct": 0.45
+  costRates: {
+    logisticsPerVisit: 4,
+    cogsPct: 0.45
   },
-  "fixedOverhead": [
-    {
-      "label": "Warehouse/office",
-      "amount": 1000
-    },
-    {
-      "label": "Utilities/Internet",
-      "amount": 500
-    }
+  fixedOverhead: [
+    { label: "Software maintenance/subscription", amount: 200 }
   ],
-  "headcount": [
-    {
-      "role": "Ophthalmologist (home visits)",
-      "count": 1,
-      "rate": 1000
-    },
-    {
-      "role": "Refraction technician (accompanying)",
-      "count": 1,
-      "rate": 600
-    },
-    {
-      "role": "Customer Care / Ops / Scheduling",
-      "count": 1,
-      "rate": 600
-    }
+  // Each role is EITHER a fixed monthly salary (basis:"month", uses
+  // monthlyRate) OR a per-visit stipend (basis:"visit", uses visitRate) —
+  // both rate fields are kept on every row (not just the active one) so
+  // switching the toggle in the UI doesn't lose whatever was typed into
+  // the other field. Doctor + Optometrist are already salaried elsewhere
+  // (shared with Alina) so this project only pays them a per-visit
+  // stipend; Ops/Customer Care is a dedicated hire, still a fixed salary.
+  headcount: [
+    { role: "Doctor", count: 1, basis: "visit", monthlyRate: 0, visitRate: 3.5 },
+    { role: "Optometrist", count: 1, basis: "visit", monthlyRate: 0, visitRate: 2 },
+    { role: "Customer Care / Ops / Scheduling", count: 1, basis: "month", monthlyRate: 600, visitRate: 0 }
   ],
-  "scenario": {
-    "conservativeAdj": -0.3,
-    "optimisticAdj": 0.3
+  scenario: {
+    conservativeAdj: -0.30,
+    optimisticAdj: 0.30
   },
-  "capital": {
-    "totalInvestment": 200000,
-    "capexItems": [
-      {
-        "label": "Equipment (2 exam kits + computers/phones)",
-        "amount": 50000,
-        "month": 1
-      },
-      {
-        "label": "Booking software/app — phase 1",
-        "amount": 15000,
-        "month": 1
-      },
-      {
-        "label": "Booking software/app — phase 2",
-        "amount": 15000,
-        "month": 6
-      }
+  capital: {
+    totalInvestment: 200000,
+    capexItems: [
+      { label: "Equipment (2 exam kits + computers/phones)", amount: 50000, month: 1 },
+      { label: "Booking software/app — phase 1", amount: 15000, month: 1 },
+      { label: "Booking software/app — phase 2", amount: 15000, month: 6 }
     ]
   }
 };
@@ -170,7 +126,6 @@ function calcModel(s, scenarioKey) {
   const rev = computeRevenuePerVisit(s);
   const adj = scenarioAdjustment(s, scenarioKey);
   const fixedOverheadMonthly = s.fixedOverhead.reduce((sum, r) => sum + Number(r.amount || 0), 0);
-  const staffCostMonthly = s.headcount.reduce((sum, r) => sum + Number(r.count || 0) * Number(r.rate || 0), 0);
 
   const months = [];
   let cashBalance = 0;
@@ -184,12 +139,23 @@ function calcModel(s, scenarioKey) {
     const examRevenue = volume * rev.examRevenuePerVisit;
     const treatmentRevenue = volume * rev.treatmentRevenuePerVisit;
     const cogs = treatmentRevenue * Number(s.costRates.cogsPct || 0);
-    const outreachPct = Number(s.costRates.outreachByQuarter[q - 1] || 0);
-    const marketing = monthlyRevenue * outreachPct;
+    // Fixed $ schedule, one free input per month — independent of revenue
+    // AND independent of `active` (keeps running through closed months).
+    const marketing = Number(s.marketing.monthlyBudget[m - 1] || 0);
     const logistics = volume * Number(s.costRates.logisticsPerVisit || 0);
 
     const variableCost = cogs + marketing + logistics;
     const grossProfit = monthlyRevenue - variableCost;
+
+    // Staff cost now depends on `volume`, so it's computed per-month rather
+    // than once outside the loop: "month" basis roles are a flat salary
+    // regardless of volume, "visit" basis roles scale with that month's visits.
+    const staffCostMonthly = s.headcount.reduce((sum, r) => {
+      const isVisit = r.basis === "visit";
+      const rate = isVisit ? Number(r.visitRate || 0) : Number(r.monthlyRate || 0);
+      const amt = Number(r.count || 0) * rate;
+      return sum + (isVisit ? amt * volume : amt);
+    }, 0);
 
     const ebitda = grossProfit - fixedOverheadMonthly - staffCostMonthly;
 
@@ -199,7 +165,7 @@ function calcModel(s, scenarioKey) {
     cashBalance = (m === 1 ? Number(s.capital.totalInvestment || 0) : cashBalance) + netCashFlow;
 
     months.push({
-      m, q, active, volume, monthlyRevenue, examRevenue, treatmentRevenue, cogs, outreachPct, marketing, logistics,
+      m, q, active, volume, monthlyRevenue, examRevenue, treatmentRevenue, cogs, marketing, logistics,
       variableCost, grossProfit, fixedOverheadMonthly, staffCostMonthly, ebitda, capex, netCashFlow, cashBalance
     });
   }

@@ -284,6 +284,45 @@ html, body {
   text-decoration: line-through;
 }
 
+/* ---------- Marketing monthly budget grid (12 free $ inputs) ---------- */
+.month-budget-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.month-budget-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.month-budget-field label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  font-weight: 600;
+}
+
+.month-budget-field input[type="number"] {
+  width: 100%;
+  padding: 6px 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  background: var(--surface-1);
+  color: var(--text-primary);
+}
+
+.month-budget-field input:focus {
+  outline: none;
+  border-color: var(--series-1);
+  box-shadow: 0 0 0 3px rgba(42,120,214,0.12);
+}
+
 .inactive-month-col {
   color: var(--critical) !important;
 }
@@ -350,11 +389,26 @@ html, body {
 .dyn-table .col-share,
 .dyn-table .col-price,
 .dyn-table .col-count,
-.dyn-table .col-rate,
 .dyn-table .col-amount,
 .dyn-table .col-month { width: 100px; }
 
+.dyn-table .col-rate { width: 150px; }
+.dyn-table .col-basis-check { width: 76px; text-align: center; }
+.dyn-table .col-basis-check input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+
 .dyn-table .col-remove { width: 36px; text-align: center; }
+
+.rate-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.rate-cell input { flex: 1 1 auto; min-width: 0; }
+.rate-unit {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
 
 .row-remove-btn {
   border: none;

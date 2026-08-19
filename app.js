@@ -58,10 +58,6 @@ const SIMPLE_FIELDS = [
   { id: "pCompanion", path: "revenue.pCompanion", percent: true },
   { id: "examFeeCompanion", path: "revenue.examFeeCompanion" },
   { id: "cvr", path: "revenue.cvr", percent: true },
-  { id: "outreachQ1", path: "costRates.outreachByQuarter.0", percent: true },
-  { id: "outreachQ2", path: "costRates.outreachByQuarter.1", percent: true },
-  { id: "outreachQ3", path: "costRates.outreachByQuarter.2", percent: true },
-  { id: "outreachQ4", path: "costRates.outreachByQuarter.3", percent: true },
   { id: "logisticsPerVisit", path: "costRates.logisticsPerVisit" },
   { id: "cogsPct", path: "costRates.cogsPct", percent: true },
   { id: "conservativeAdj", path: "scenario.conservativeAdj", percent: true },
@@ -131,6 +127,37 @@ function bindMonthActiveGrid() {
 }
 
 /* ---------------------------------------------------------------------------
+   Marketing monthly budget grid — 12 free $ inputs, one per month. Fixed
+   schedule, not tied to revenue/volume, and deliberately NOT wired to the
+   Active Months toggle (marketing keeps running through a closed month).
+   --------------------------------------------------------------------------- */
+function renderMarketingMonthlyGrid() {
+  const el = document.getElementById("marketingMonthlyGrid");
+  if (!el) return;
+  const arr = state.marketing.monthlyBudget;
+  el.innerHTML = arr.map((val, i) => `
+    <div class="month-budget-field">
+      <label for="mktM${i + 1}">M${i + 1}</label>
+      <input type="number" step="100" id="mktM${i + 1}" data-month-index="${i}" class="marketing-month-input" value="${roundForInput(val)}">
+    </div>
+  `).join("");
+}
+
+function bindMarketingMonthlyGrid() {
+  const el = document.getElementById("marketingMonthlyGrid");
+  if (!el) return;
+  el.addEventListener("input", e => {
+    const t = e.target;
+    if (!t.matches(".marketing-month-input")) return;
+    const idx = Number(t.getAttribute("data-month-index"));
+    let v = parseFloat(t.value);
+    if (isNaN(v)) v = 0;
+    state.marketing.monthlyBudget[idx] = v;
+    recalcAndRender();
+  });
+}
+
+/* ---------------------------------------------------------------------------
    Dynamic tables: mix / headcount / capex
    --------------------------------------------------------------------------- */
 function renderMixRows() {
@@ -145,16 +172,31 @@ function renderMixRows() {
   `).join("");
 }
 
+function headcountRowTotalText(row) {
+  const isVisit = row.basis === "visit";
+  return isVisit
+    ? fmtUSD(Number(row.count || 0) * Number(row.visitRate || 0), 2) + "/visit"
+    : fmtUSD(Number(row.count || 0) * Number(row.monthlyRate || 0)) + "/mo";
+}
+
 function renderHeadcountRows() {
   const tbody = document.getElementById("headcountRows");
   tbody.innerHTML = state.headcount.map((row, i) => {
-    const total = Number(row.count || 0) * Number(row.rate || 0);
+    const isVisit = row.basis === "visit";
+    const rateField = isVisit ? "visitRate" : "monthlyRate";
+    const rateValue = isVisit ? row.visitRate : row.monthlyRate;
     return `
     <tr>
       <td><input type="text" data-list="headcount" data-index="${i}" data-field="role" value="${escapeHtml(row.role)}"></td>
+      <td class="col-basis-check"><input type="checkbox" data-list="headcount" data-index="${i}" data-field="basis" ${isVisit ? "checked" : ""} title="Ticked = paid per visit performed. Unticked = fixed monthly salary."></td>
       <td class="col-count"><input type="number" step="1" data-list="headcount" data-index="${i}" data-field="count" value="${roundForInput(row.count)}"></td>
-      <td class="col-rate"><input type="number" step="10" data-list="headcount" data-index="${i}" data-field="rate" value="${roundForInput(row.rate)}"></td>
-      <td class="col-amount" id="hcTotal-${i}">${fmtUSD(total)}</td>
+      <td class="col-rate">
+        <div class="rate-cell">
+          <input type="number" step="${isVisit ? "0.1" : "10"}" data-list="headcount" data-index="${i}" data-field="${rateField}" value="${roundForInput(rateValue)}">
+          <span class="rate-unit">${isVisit ? "$/visit" : "$/month"}</span>
+        </div>
+      </td>
+      <td class="col-amount" id="hcTotal-${i}">${headcountRowTotalText(row)}</td>
       <td class="col-remove">${state.headcount.length > 1 ? `<button class="row-remove-btn" data-remove="headcount" data-index="${i}" type="button" title="Remove row">✕</button>` : ""}</td>
     </tr>`;
   }).join("");
@@ -163,7 +205,7 @@ function renderHeadcountRows() {
 function updateHeadcountRowTotals() {
   state.headcount.forEach((row, i) => {
     const el = document.getElementById(`hcTotal-${i}`);
-    if (el) el.textContent = fmtUSD(Number(row.count || 0) * Number(row.rate || 0));
+    if (el) el.textContent = headcountRowTotalText(row);
   });
 }
 
@@ -210,6 +252,16 @@ function bindDynamicTableEvents() {
     const arr = listArrayFor(list);
     if (!arr || !arr[idx]) return;
 
+    // The headcount "basis" checkbox swaps which rate field (monthlyRate vs
+    // visitRate) is shown/editable for that row, so it needs a full
+    // re-render rather than just patching a value in place.
+    if (t.type === "checkbox") {
+      arr[idx][field] = t.checked ? "visit" : "month";
+      if (list === "headcount") renderHeadcountRows();
+      recalcAndRender();
+      return;
+    }
+
     let value;
     if (t.type === "number") {
       value = parseFloat(t.value);
@@ -245,7 +297,7 @@ function bindDynamicTableEvents() {
     recalcAndRender();
   });
   document.getElementById("addHeadcountRow").addEventListener("click", () => {
-    state.headcount.push({ role: "New role", count: 1, rate: 0 });
+    state.headcount.push({ role: "New role", count: 1, basis: "month", monthlyRate: 0, visitRate: 0 });
     renderHeadcountRows();
     recalcAndRender();
   });
@@ -304,8 +356,15 @@ function updateFixedTotalDisplay() {
   document.getElementById("fixedTotalDisplay").textContent = fmtUSD(total);
 }
 function updateStaffTotalDisplay() {
-  const total = state.headcount.reduce((s, r) => s + Number(r.count || 0) * Number(r.rate || 0), 0);
-  document.getElementById("staffTotalDisplay").textContent = fmtUSD(total);
+  let fixedTotal = 0, visitTotal = 0;
+  state.headcount.forEach(row => {
+    if (row.basis === "visit") visitTotal += Number(row.count || 0) * Number(row.visitRate || 0);
+    else fixedTotal += Number(row.count || 0) * Number(row.monthlyRate || 0);
+  });
+  const parts = [];
+  parts.push(fmtUSD(fixedTotal) + "/mo fixed");
+  if (visitTotal > 0) parts.push(fmtUSD(visitTotal, 2) + "/visit combined stipend");
+  document.getElementById("staffTotalDisplay").textContent = parts.join(" + ");
 }
 function updateCapexTotalDisplay() {
   const total = state.capital.capexItems.reduce((s, r) => s + Number(r.amount || 0), 0);
@@ -357,7 +416,7 @@ const TABLE_ROWS = [
   { key: "monthlyRevenue", label: "Total Revenue", fmt: "usd", bold: true },
   { key: "examRevenue", label: "Exam Revenue", fmt: "usd", sub: true },
   { key: "treatmentRevenue", label: "Glasses/Treatment Revenue", fmt: "usd", sub: true },
-  { key: "marketing", label: "Marketing (Outreach)", fmt: "usd" },
+  { key: "marketing", label: "Marketing", fmt: "usd" },
   { key: "cogs", label: "COGS", fmt: "usd" },
   { key: "logistics", label: "Logistics", fmt: "usd" },
   { key: "grossProfit", label: "Gross Profit", fmt: "usd", signed: true },
@@ -804,6 +863,7 @@ async function saveAsDefault() {
    --------------------------------------------------------------------------- */
 function fullRenderAssumptionInputs() {
   renderMonthActiveGrid();
+  renderMarketingMonthlyGrid();
   renderMixRows();
   renderFixedOverheadRows();
   renderHeadcountRows();
@@ -848,6 +908,7 @@ function init() {
   fullRenderAssumptionInputs();
   bindSimpleFields();
   bindMonthActiveGrid();
+  bindMarketingMonthlyGrid();
   bindDynamicTableEvents();
   bindScenarioTabs();
   bindAssumptionsToggle();
