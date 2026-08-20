@@ -22,70 +22,182 @@ const ADMIN_CONFIG = {
    tool every time it's used. Hand edits here are fine, but will be
    overwritten the next time someone saves new defaults from the page. === */
 const DEFAULTS = {
-  volume: {
-    baseVolume: 10,          // month 1-3 visits (Q1 rate) — FREE INPUT, see UI note
-    quarterlyGrowth: 0.5,    // step-wise quarterly growth
-    capacityPerDayPerTeam: 7, // reference only, NOT used in the formulas
-    teams: 1,
-    // Which of the 12 months the team is actually operating. Unchecking a
-    // month (e.g. Tet/a holiday closure, or a ramp-up month with no revenue
-    // yet) sets that month's visits to 0. Fixed overhead and staff cost still
-    // apply (salaried staff are still paid). Default: M1 (too early to have
-    // revenue yet) and M6 are closed.
-    monthActive: [false, true, true, true, true, false, true, true, true, true, true, true]
-  },
-  revenue: {
-    examFeePrimary: 30,
-    pCompanion: 0.3,
-    examFeeCompanion: 15,
-    cvr: 0.85,
-    mix: [
-      { label: "Standard frame glasses + Atropine", share: 0.285, price: 52 },
-      { label: "Myopia-control frame glasses — $120 tier (~VND 3M)", share: 0.475, price: 120 },
-      { label: "Myopia-control frame glasses — $280 tier (~VND 7M)", share: 0.19, price: 280 },
-      { label: "Ortho-K - $700 (~VND 18M)", share: 0.05, price: 700 }
+  "volume": {
+    "baseVolume": 50,
+    "quarterlyGrowth": 0.5,
+    "capacityPerDayPerTeam": 7,
+    "teams": 1,
+    "monthActive": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
     ]
   },
-  // Fixed $ schedule, one editable field per month — NOT a % of revenue,
-  // and NOT zeroed out by Active Months (branding/market-education spend
-  // keeps running even during a closed/holiday month). Default: $10k/mo
-  // for the first 3 months (branding push), $5k/mo from month 4 on —
-  // every month is its own free input, this is just the starting point.
-  marketing: {
-    monthlyBudget: [10000, 10000, 10000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000]
+  "revenue": {
+    "examFeePrimary": 30,
+    "pCompanion": 0.3,
+    "examFeeCompanion": 15,
+    "cvr": 0.85,
+    "mix": [
+      {
+        "label": "Standard frame glasses + Atropine",
+        "share": 0.285,
+        "price": 52
+      },
+      {
+        "label": "Myopia-control frame glasses — $120 tier (~VND 3M)",
+        "share": 0.475,
+        "price": 120
+      },
+      {
+        "label": "Myopia-control frame glasses — $280 tier (~VND 7M)",
+        "share": 0.19,
+        "price": 280
+      },
+      {
+        "label": "Ortho-K - $700 (~VND 18M)",
+        "share": 0.05,
+        "price": 700
+      }
+    ]
   },
-  costRates: {
-    logisticsPerVisit: 2,
-    cogsPct: 0.45
+  "marketing": {
+    "monthlyBudget": [
+      10000,
+      10000,
+      10000,
+      5000,
+      5000,
+      5000,
+      5000,
+      5000,
+      5000,
+      5000,
+      5000,
+      5000
+    ]
   },
-  fixedOverhead: [
-    { label: "Software maintenance/subscription", amount: 500 }
+  "costRates": {
+    "logisticsPerVisit": 5,
+    "cogsPct": 0.45
+  },
+  "fixedOverhead": [
+    {
+      "label": "Software maintenance/subscription",
+      "amount": 500
+    }
   ],
-  // Each role is EITHER a fixed monthly salary (basis:"month", uses
-  // monthlyRate) OR a per-exam stipend (basis:"exam", uses examRate) —
-  // "per exam" means per CHILD examined, not per household visit: a visit
-  // with a companion counts as 2 exams (see calcModel, multiplied by
-  // rev.expectedChildrenPerVisit). Both rate fields are kept on every row
-  // (not just the active one) so switching the toggle in the UI doesn't
-  // lose whatever was typed into the other field. Doctor + Optometrist are
-  // already salaried elsewhere (shared with Alina) so this project only
-  // pays them a per-exam stipend; Ops/Customer Care is a dedicated hire,
-  // still a fixed salary.
-  headcount: [
-    { role: "Doctor", count: 1, basis: "exam", monthlyRate: 0, examRate: 3.5 },
-    { role: "Optometrist", count: 1, basis: "exam", monthlyRate: 0, examRate: 2 },
-    { role: "Customer Care / Ops / Scheduling", count: 1, basis: "month", monthlyRate: 600, examRate: 0 }
+  "headcount": [
+    {
+      "role": "Doctor",
+      "count": 1,
+      "basis": "exam",
+      "monthlyRate": 0,
+      "examRate": 3.5
+    },
+    {
+      "role": "Optometrist",
+      "count": 1,
+      "basis": "exam",
+      "monthlyRate": 0,
+      "examRate": 2
+    },
+    {
+      "role": "Customer Care / Ops / Scheduling",
+      "count": 1,
+      "basis": "month",
+      "monthlyRate": 600,
+      "examRate": 0
+    },
+    {
+      "role": "Doctor Fix 1",
+      "count": 1,
+      "basis": "month",
+      "monthlyRate": 800,
+      "examRate": 0
+    },
+    {
+      "role": "Optometrist Fix 1",
+      "count": 1,
+      "basis": "month",
+      "monthlyRate": 500,
+      "examRate": 0
+    },
+    {
+      "role": "Driver 1",
+      "count": 1,
+      "basis": "month",
+      "monthlyRate": 600,
+      "examRate": 0
+    },
+    {
+      "role": "Driver 2",
+      "count": 1,
+      "basis": "month",
+      "monthlyRate": 300,
+      "examRate": 0
+    },
+    {
+      "role": "Doctor Fix 2",
+      "count": 1,
+      "basis": "month",
+      "monthlyRate": 400,
+      "examRate": 0
+    },
+    {
+      "role": "Optometrist Fix 2",
+      "count": 1,
+      "basis": "month",
+      "monthlyRate": 250,
+      "examRate": 0
+    }
   ],
-  scenario: {
-    conservativeAdj: -0.30,
-    optimisticAdj: 0.30
+  "scenario": {
+    "conservativeAdj": -0.3,
+    "optimisticAdj": 0.3
   },
-  capital: {
-    totalInvestment: 150000,
-    capexItems: [
-      { label: "Equipment (2 exam kits)", amount: 40000, month: 1 },
-      { label: "Booking software/app — phase 1", amount: 15000, month: 1 },
-      { label: "Booking software/app — phase 2", amount: 15000, month: 6 }
+  "capital": {
+    "totalInvestment": 250000,
+    "capexItems": [
+      {
+        "label": "Equipment 1",
+        "amount": 20000,
+        "month": 1
+      },
+      {
+        "label": "Booking software/app — phase 1",
+        "amount": 15000,
+        "month": 1
+      },
+      {
+        "label": "Booking software/app — phase 2",
+        "amount": 15000,
+        "month": 6
+      },
+      {
+        "label": "Van 1",
+        "amount": 40000,
+        "month": 1
+      },
+      {
+        "label": "Van 2",
+        "amount": 40000,
+        "month": 6
+      },
+      {
+        "label": "Equipment 2",
+        "amount": 20000,
+        "month": 6
+      }
     ]
   }
 };
