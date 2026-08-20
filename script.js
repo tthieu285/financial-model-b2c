@@ -181,7 +181,7 @@ const DEFAULTS = {
       {
         "label": "Booking software/app — phase 2",
         "amount": 15000,
-        "month": 6
+        "month": 7
       },
       {
         "label": "Van 1",
@@ -191,12 +191,12 @@ const DEFAULTS = {
       {
         "label": "Van 2",
         "amount": 40000,
-        "month": 6
+        "month": 7
       },
       {
         "label": "Equipment 2",
         "amount": 20000,
-        "month": 6
+        "month": 7
       }
     ]
   }
