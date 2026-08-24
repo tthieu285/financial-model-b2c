@@ -47,11 +47,32 @@ const COLOR_MUTED = "#898781";
 const COLOR_BASELINE = "#c3c2b7";
 
 /* ---------------------------------------------------------------------------
+   Unified "view" — ONE control drives the KPI cards, both charts, the
+   revenue-mix pie, AND the Monthly P&L section all at once:
+     "total" -> whole 2-year plan (KPIs/charts use the 2-year total; the
+                Monthly P&L section shows the compact Year1|Year2|2-Yr Total
+                summary table instead of a per-month grid, since a 24-column
+                table would need horizontal scrolling)
+     1 or 2  -> that single year (KPIs/charts scoped to its 12 months; the
+                Monthly P&L section shows that year's 12-month detail table)
+   --------------------------------------------------------------------------- */
+let currentView = "total"; // "total" | 1 | 2
+
+function getViewSlice(model) {
+  if (currentView === "total") {
+    return { months: model.months, agg: model.total2yr, label: "2-Year Total" };
+  }
+  const idx = currentView - 1;
+  return { months: model.months.slice(idx * 12, idx * 12 + 12), agg: model.years[idx], label: "Year " + currentView };
+}
+
+/* ---------------------------------------------------------------------------
    Simple field bindings (input id <-> state path)
    --------------------------------------------------------------------------- */
 const SIMPLE_FIELDS = [
   { id: "volBase", path: "volume.baseVolume" },
   { id: "volGrowth", path: "volume.quarterlyGrowth", percent: true },
+  { id: "volAnnualGrowth", path: "volume.annualGrowth", percent: true },
   { id: "volCapacity", path: "volume.capacityPerDayPerTeam" },
   { id: "volTeams", path: "volume.teams" },
   { id: "examFeePrimary", path: "revenue.examFeePrimary" },
@@ -102,15 +123,25 @@ function bindSimpleFields() {
 }
 
 /* ---------------------------------------------------------------------------
-   Active-months toggle grid (holiday / closure modeling)
+   Active-months toggle grid (holiday / closure modeling) — 24 months across
+   2 years, rendered as 2 labeled groups of 12 so it still reads as "months
+   within a year" instead of a wall of 24 undifferentiated buttons.
    --------------------------------------------------------------------------- */
 function renderMonthActiveGrid() {
   const el = document.getElementById("monthActiveGrid");
   if (!el) return;
   const arr = state.volume.monthActive;
-  el.innerHTML = arr.map((active, i) => `
-    <button type="button" class="month-toggle-btn ${active ? "" : "inactive"}" data-month-index="${i}" title="${active ? "Operating — click to mark as closed" : "Closed (holiday) — click to reopen"}">M${i + 1}</button>
-  `).join("");
+  let html = "";
+  for (let y = 0; y < 2; y++) {
+    html += `<div class="month-group"><div class="month-group-label">Year ${y + 1}</div><div class="month-toggle-grid">`;
+    for (let mi = 0; mi < 12; mi++) {
+      const idx = y * 12 + mi;
+      const active = arr[idx];
+      html += `<button type="button" class="month-toggle-btn ${active ? "" : "inactive"}" data-month-index="${idx}" title="${active ? "Operating — click to mark as closed" : "Closed (holiday) — click to reopen"}">M${mi + 1}</button>`;
+    }
+    html += `</div></div>`;
+  }
+  el.innerHTML = html;
 }
 
 function bindMonthActiveGrid() {
@@ -127,20 +158,31 @@ function bindMonthActiveGrid() {
 }
 
 /* ---------------------------------------------------------------------------
-   Marketing monthly budget grid — 12 free $ inputs, one per month. Fixed
-   schedule, not tied to revenue/volume, and deliberately NOT wired to the
-   Active Months toggle (marketing keeps running through a closed month).
+   Marketing monthly budget grid — 24 free $ inputs (2 years x 12), grouped
+   the same way as the Active Months grid. Fixed schedule, not tied to
+   revenue/volume, and deliberately NOT wired to the Active Months toggle
+   (marketing keeps running through a closed month).
    --------------------------------------------------------------------------- */
 function renderMarketingMonthlyGrid() {
   const el = document.getElementById("marketingMonthlyGrid");
   if (!el) return;
   const arr = state.marketing.monthlyBudget;
-  el.innerHTML = arr.map((val, i) => `
-    <div class="month-budget-field">
-      <label for="mktM${i + 1}">M${i + 1}</label>
-      <input type="number" step="100" id="mktM${i + 1}" data-month-index="${i}" class="marketing-month-input" value="${roundForInput(val)}">
-    </div>
-  `).join("");
+  let html = "";
+  for (let y = 0; y < 2; y++) {
+    html += `<div class="month-group"><div class="month-group-label">Year ${y + 1}</div><div class="month-budget-grid">`;
+    for (let mi = 0; mi < 12; mi++) {
+      const idx = y * 12 + mi;
+      const val = arr[idx];
+      html += `
+        <div class="month-budget-field">
+          <label for="mktM${idx + 1}">M${mi + 1}</label>
+          <input type="number" step="100" id="mktM${idx + 1}" data-month-index="${idx}" class="marketing-month-input" value="${roundForInput(val)}">
+        </div>
+      `;
+    }
+    html += `</div></div>`;
+  }
+  el.innerHTML = html;
 }
 
 function bindMarketingMonthlyGrid() {
@@ -158,7 +200,7 @@ function bindMarketingMonthlyGrid() {
 }
 
 /* ---------------------------------------------------------------------------
-   Dynamic tables: mix / headcount / capex
+   Dynamic tables: mix / headcount / capex / fixedOverhead
    --------------------------------------------------------------------------- */
 function renderMixRows() {
   const tbody = document.getElementById("mixRows");
@@ -196,6 +238,12 @@ function renderHeadcountRows() {
           <span class="rate-unit">${isExam ? "$/exam" : "$/month"}</span>
         </div>
       </td>
+      <td class="col-start">
+        <div class="start-cell" title="Role costs $0 before this Year/Month — use it to phase in hires as volume grows">
+          <span class="start-label">Y</span><input type="number" step="1" min="1" max="2" data-list="headcount" data-index="${i}" data-field="startYear" value="${roundForInput(row.startYear || 1)}">
+          <span class="start-label">M</span><input type="number" step="1" min="1" max="12" data-list="headcount" data-index="${i}" data-field="startMonth" value="${roundForInput(row.startMonth || 1)}">
+        </div>
+      </td>
       <td class="col-amount" id="hcTotal-${i}">${headcountRowTotalText(row)}</td>
       <td class="col-remove">${state.headcount.length > 1 ? `<button class="row-remove-btn" data-remove="headcount" data-index="${i}" type="button" title="Remove row">✕</button>` : ""}</td>
     </tr>`;
@@ -215,6 +263,7 @@ function renderCapexRows() {
     <tr>
       <td><input type="text" data-list="capex" data-index="${i}" data-field="label" value="${escapeHtml(row.label)}"></td>
       <td class="col-amount"><input type="number" step="100" data-list="capex" data-index="${i}" data-field="amount" value="${roundForInput(row.amount)}"></td>
+      <td class="col-year"><input type="number" step="1" min="1" max="2" data-list="capex" data-index="${i}" data-field="year" value="${roundForInput(row.year || 1)}"></td>
       <td class="col-month"><input type="number" step="1" min="1" max="12" data-list="capex" data-index="${i}" data-field="month" value="${roundForInput(row.month)}"></td>
       <td class="col-remove">${state.capital.capexItems.length > 1 ? `<button class="row-remove-btn" data-remove="capex" data-index="${i}" type="button" title="Remove row">✕</button>` : ""}</td>
     </tr>
@@ -297,12 +346,12 @@ function bindDynamicTableEvents() {
     recalcAndRender();
   });
   document.getElementById("addHeadcountRow").addEventListener("click", () => {
-    state.headcount.push({ role: "New role", count: 1, basis: "month", monthlyRate: 0, examRate: 0 });
+    state.headcount.push({ role: "New role", count: 1, basis: "month", monthlyRate: 0, examRate: 0, startYear: 1, startMonth: 1 });
     renderHeadcountRows();
     recalcAndRender();
   });
   document.getElementById("addCapexRow").addEventListener("click", () => {
-    state.capital.capexItems.push({ label: "New item", amount: 0, month: 1 });
+    state.capital.capexItems.push({ label: "New item", amount: 0, year: 1, month: 1 });
     renderCapexRows();
     recalcAndRender();
   });
@@ -362,7 +411,7 @@ function updateStaffTotalDisplay() {
     else fixedTotal += Number(row.count || 0) * Number(row.monthlyRate || 0);
   });
   const parts = [];
-  parts.push(fmtUSD(fixedTotal) + "/mo fixed");
+  parts.push(fmtUSD(fixedTotal) + "/mo fixed (once every fixed role has started)");
   if (examTotal > 0) parts.push(fmtUSD(examTotal, 2) + "/exam combined stipend");
   document.getElementById("staffTotalDisplay").textContent = parts.join(" + ");
 }
@@ -372,7 +421,27 @@ function updateCapexTotalDisplay() {
 }
 
 /* ---------------------------------------------------------------------------
-   KPI cards
+   View tabs — the single control driving KPI cards, both charts, the
+   revenue-mix pie, and the Monthly P&L section (see getViewSlice() above).
+   --------------------------------------------------------------------------- */
+function bindViewTabs() {
+  document.querySelectorAll(".view-tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".view-tab-btn").forEach(b => {
+        b.classList.remove("active");
+        b.setAttribute("aria-selected", "false");
+      });
+      btn.classList.add("active");
+      btn.setAttribute("aria-selected", "true");
+      const v = btn.getAttribute("data-view");
+      currentView = v === "total" ? "total" : Number(v);
+      recalcAndRender();
+    });
+  });
+}
+
+/* ---------------------------------------------------------------------------
+   KPI cards — labels/scope follow the active view tab.
    --------------------------------------------------------------------------- */
 function findFirstPositiveEbitdaMonth(months) {
   const found = months.find(mo => mo.ebitda > 0);
@@ -380,39 +449,88 @@ function findFirstPositiveEbitdaMonth(months) {
 }
 
 function renderKPIs(model) {
-  const ann = model.annual;
-  const q4 = model.months.slice(9, 12).reduce((s, m) => s + m.ebitda, 0);
-  const firstPositive = findFirstPositiveEbitdaMonth(model.months);
+  const { agg, months, label } = getViewSlice(model);
+  const firstPositiveAbs = findFirstPositiveEbitdaMonth(months);
+  let firstPositiveLabel = "Not yet";
+  if (firstPositiveAbs) {
+    if (currentView === "total") {
+      const yr = Math.ceil(firstPositiveAbs / 12);
+      const mo = firstPositiveAbs - (yr - 1) * 12;
+      firstPositiveLabel = `Y${yr} M${mo}`;
+    } else {
+      const mo = firstPositiveAbs - (currentView - 1) * 12;
+      firstPositiveLabel = `M${mo}`;
+    }
+  }
+  const endMonthAbs = months[months.length - 1].m;
   const el = document.getElementById("kpiGrid");
   el.innerHTML = `
     <div class="kpi-card">
-      <div class="kpi-label">Total Year 1 Revenue</div>
-      <div class="kpi-value">${fmtUSD(ann.monthlyRevenue)}</div>
-      <div class="kpi-sub">${fmtNum(ann.volume, 0)} visits</div>
+      <div class="kpi-label">${label} Revenue</div>
+      <div class="kpi-value">${fmtUSD(agg.monthlyRevenue)}</div>
+      <div class="kpi-sub">${fmtNum(agg.volume, 0)} visits</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-label">Total Year 1 EBITDA</div>
-      <div class="kpi-value ${ann.ebitda >= 0 ? "positive" : "negative"}">${fmtUSD(ann.ebitda)}</div>
-      <div class="kpi-sub">Margin ${fmtPctNum(ann.ebitdaMargin)}</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Q4 EBITDA</div>
-      <div class="kpi-value ${q4 >= 0 ? "positive" : "negative"}">${fmtUSD(q4)}</div>
-      <div class="kpi-sub">Months 10–12</div>
+      <div class="kpi-label">${label} EBITDA</div>
+      <div class="kpi-value ${agg.ebitda >= 0 ? "positive" : "negative"}">${fmtUSD(agg.ebitda)}</div>
+      <div class="kpi-sub">Margin ${fmtPctNum(agg.ebitdaMargin)}</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-label">EBITDA Positive From</div>
-      <div class="kpi-value ${firstPositive ? "positive" : "negative"}">${firstPositive ? "M" + firstPositive : "Not yet"}</div>
-      <div class="kpi-sub">${firstPositive ? "First month EBITDA turns positive" : "Still negative through Month 12"}</div>
+      <div class="kpi-value ${firstPositiveAbs ? "positive" : "negative"}">${firstPositiveLabel}</div>
+      <div class="kpi-sub">${firstPositiveAbs ? "First month EBITDA turns positive" : "Still negative through Month " + endMonthAbs}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Ending Cash Balance</div>
+      <div class="kpi-value ${agg.endingCash >= 0 ? "positive" : "negative"}">${fmtUSD(agg.endingCash)}</div>
+      <div class="kpi-sub">Projected at end of Month ${endMonthAbs}</div>
     </div>
   `;
 }
 
 /* ---------------------------------------------------------------------------
-   Monthly P&L table
+   2-Year Summary — compact Year 1 | Year 2 | 2-Year Total table. Shown ONLY
+   when the "2-Year Total" view tab is active, replacing the per-month detail
+   table (which would need 24 columns / horizontal scrolling in that view).
+   --------------------------------------------------------------------------- */
+const YEAR_SUMMARY_ROWS = [
+  { key: "volume", label: "Visits", fmt: "num0" },
+  { key: "monthlyRevenue", label: "Total Revenue", fmt: "usd" },
+  { key: "ebitda", label: "EBITDA", fmt: "usd", signed: true },
+  { key: "ebitdaMargin", label: "EBITDA Margin", fmt: "pct" },
+  { key: "endingCash", label: "Ending Cash Balance", fmt: "usd", signed: true }
+];
+
+function renderYearSummary(model) {
+  const el = document.getElementById("yearSummaryTable");
+  if (!el) return;
+  const cols = [model.years[0], model.years[1], model.total2yr];
+  const colLabels = ["Year 1", "Year 2", "2-Year Total"];
+
+  let html = `<thead><tr><th>Metric</th>${colLabels.map(l => `<th>${l}</th>`).join("")}</tr></thead><tbody>`;
+  YEAR_SUMMARY_ROWS.forEach(row => {
+    html += `<tr><td>${row.label}</td>`;
+    cols.forEach(c => {
+      const v = row.key === "endingCash" ? c.endingCash : c[row.key];
+      let cellText;
+      if (row.fmt === "num0") cellText = fmtNum(v, 0);
+      else if (row.fmt === "pct") cellText = fmtPctNum(v);
+      else cellText = fmtUSD(v);
+      html += `<td class="${row.signed ? cellClass(v, true) : ""}">${cellText}</td>`;
+    });
+    html += `</tr>`;
+  });
+  html += `</tbody>`;
+  el.innerHTML = html;
+}
+
+/* ---------------------------------------------------------------------------
+   Monthly P&L section — swaps between the 2-Year Summary table (view=total)
+   and a single year's 12-month detail table (view=1 or 2), driven entirely
+   by the shared view tabs above the KPI cards.
    --------------------------------------------------------------------------- */
 const TABLE_ROWS = [
-  { key: "volume", label: "Visits", fmt: "num1" },
+  { key: "volume", label: "Visits", fmt: "num0" },
   { key: "monthlyRevenue", label: "Total Revenue", fmt: "usd", bold: true },
   { key: "examRevenue", label: "Exam Revenue", fmt: "usd", sub: true },
   { key: "treatmentRevenue", label: "Glasses/Treatment Revenue", fmt: "usd", sub: true },
@@ -429,6 +547,7 @@ const TABLE_ROWS = [
 ];
 
 function formatCell(v, fmt) {
+  if (fmt === "num0") return fmtNum(v, 0);
   if (fmt === "num1") return fmtNum(v, 1);
   return fmtUSD(v, 0);
 }
@@ -437,33 +556,66 @@ function cellClass(v, signed) {
   return v < 0 ? "negative" : "positive";
 }
 
+function updateTableCardSections(model) {
+  const summaryWrap = document.getElementById("yearSummaryWrap");
+  const tableWrap = document.getElementById("monthlyTableWrap");
+  const title = document.getElementById("tableCardTitle");
+  if (currentView === "total") {
+    summaryWrap.style.display = "block";
+    tableWrap.style.display = "none";
+    title.textContent = "Monthly P&L — 2-Year Summary";
+  } else {
+    summaryWrap.style.display = "none";
+    tableWrap.style.display = "block";
+    title.textContent = "Monthly P&L — Year " + currentView;
+    renderMonthlyTable(model);
+  }
+}
+
 function renderMonthlyTable(model) {
   const thead = document.getElementById("monthlyTableHead");
   const tbody = document.getElementById("monthlyTableBody");
-  const months = model.months;
+  const yearIdx = currentView - 1;
+  const months = model.months.slice(yearIdx * 12, yearIdx * 12 + 12);
+  const yearTotals = model.years[yearIdx];
 
   thead.innerHTML = `<tr><th>Metric</th>${months.map(m => m.active
-    ? `<th>M${m.m}</th>`
-    : `<th class="inactive-month-col" title="Closed (holiday) — modeled as 0 visits">M${m.m} ✕</th>`
-  ).join("")}<th class="col-annual">Full Year</th></tr>`;
+    ? `<th>M${m.monthInYear}</th>`
+    : `<th class="inactive-month-col" title="Closed (holiday) — modeled as 0 visits">M${m.monthInYear} ✕</th>`
+  ).join("")}<th class="col-annual">Year ${currentView} Total</th></tr>`;
 
   tbody.innerHTML = TABLE_ROWS.map(row => {
     const cells = months.map(m => {
       const v = m[row.key];
       return `<td class="${cellClass(v, row.signed)}"${row.bold ? ' style="font-weight:700"' : ""}>${formatCell(v, row.fmt)}</td>`;
     }).join("");
-    const annualVal = row.annualIsEnding ? model.annual.endingCash : model.annual[row.key];
+    const annualVal = row.annualIsEnding ? yearTotals.endingCash : yearTotals[row.key];
     const annualCell = `<td class="col-annual ${cellClass(annualVal, row.signed)}">${formatCell(annualVal, row.fmt)}</td>`;
     return `<tr${row.sub ? ' class="sub-row"' : ""}><td>${row.label}</td>${cells}${annualCell}</tr>`;
   }).join("");
 }
 
 /* ---------------------------------------------------------------------------
-   Charts (inline SVG, hand-drawn, no CDN dependency)
+   Charts (inline SVG, hand-drawn, no CDN dependency) — plot whichever months
+   the active view tab scopes to (12 months for Year 1/2, 24 for 2-Year
+   Total). When 24 months are shown, axis labels are thinned to one per
+   quarter so it doesn't turn into unreadable clutter; a single year labels
+   every month.
    --------------------------------------------------------------------------- */
+function monthTooltipLabel(m, totalCount) {
+  return totalCount > 12 ? `Y${m.year} M${m.monthInYear}` : `M${m.monthInYear}`;
+}
+function monthAxisLabel(m) {
+  return `Y${m.year}Q${m.q}`;
+}
+function shouldDrawLabel(m, totalCount) {
+  return totalCount <= 12 ? true : m.monthInYear % 3 === 1;
+}
+
 function renderRevenueEbitdaChart(months) {
   const W = 640, H = 260, padL = 46, padR = 12, padT = 14, padB = 26;
   const plotW = W - padL - padR, plotH = H - padT - padB;
+  const n = months.length;
 
   const revs = months.map(m => m.monthlyRevenue);
   const ebs = months.map(m => m.ebitda);
@@ -474,9 +626,8 @@ function renderRevenueEbitdaChart(months) {
 
   const yScale = v => padT + plotH - ((v - minV) / range) * plotH;
   const zeroY = yScale(0);
-  const n = months.length;
   const bandW = plotW / n;
-  const barW = Math.min(20, bandW * 0.5);
+  const barW = Math.min(22, bandW * 0.6);
 
   let gridSvg = "";
   const steps = 4;
@@ -494,13 +645,16 @@ function renderRevenueEbitdaChart(months) {
     const y = yScale(m.monthlyRevenue);
     const top = Math.min(y, zeroY);
     const h = Math.max(Math.abs(zeroY - y), 1);
-    barsSvg += `<rect class="bar-mark" x="${(cx - barW / 2).toFixed(1)}" y="${top.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="4" fill="${COLOR_SERIES_1}"><title>Month ${m.m}: Revenue ${fmtUSD(m.monthlyRevenue)}</title></rect>`;
+    barsSvg += `<rect class="bar-mark" x="${(cx - barW / 2).toFixed(1)}" y="${top.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${COLOR_SERIES_1}"><title>${monthTooltipLabel(m, n)}: Revenue ${fmtUSD(m.monthlyRevenue)}</title></rect>`;
     linePts.push([cx, yScale(m.ebitda)]);
-    labelsSvg += `<text x="${cx.toFixed(1)}" y="${H - 8}" text-anchor="middle" font-size="9" fill="${COLOR_MUTED}">M${m.m}</text>`;
+    if (shouldDrawLabel(m, n)) {
+      const text = n > 12 ? monthAxisLabel(m) : "M" + m.monthInYear;
+      labelsSvg += `<text x="${cx.toFixed(1)}" y="${H - 8}" text-anchor="middle" font-size="9" fill="${COLOR_MUTED}">${text}</text>`;
+    }
   });
 
   const linePath = linePts.map((p, i) => (i === 0 ? "M" : "L") + p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ");
-  const dotsSvg = linePts.map((p, i) => `<circle class="pt-mark" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5" fill="${COLOR_SERIES_2}"><title>Month ${months[i].m}: EBITDA ${fmtUSD(months[i].ebitda)}</title></circle>`).join("");
+  const dotsSvg = linePts.map((p, i) => `<circle class="pt-mark" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="${COLOR_SERIES_2}"><title>${monthTooltipLabel(months[i], n)}: EBITDA ${fmtUSD(months[i].ebitda)}</title></circle>`).join("");
   const zeroLineSvg = `<line x1="${padL}" y1="${zeroY.toFixed(1)}" x2="${W - padR}" y2="${zeroY.toFixed(1)}" stroke="${COLOR_BASELINE}" stroke-width="1.2"/>`;
 
   document.getElementById("chartRevenueEbitda").innerHTML = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Revenue and EBITDA by month">
@@ -513,12 +667,12 @@ function renderRevenueEbitdaChart(months) {
 function renderCashChart(months) {
   const W = 640, H = 260, padL = 54, padR = 12, padT = 14, padB = 26;
   const plotW = W - padL - padR, plotH = H - padT - padB;
+  const n = months.length;
 
   const vals = months.map(m => m.cashBalance);
   const minV = Math.min(0, ...vals);
   const maxV = Math.max(0, ...vals);
   const range = (maxV - minV) || 1;
-  const n = months.length;
 
   const yScale = v => padT + plotH - ((v - minV) / range) * plotH;
   const xScale = i => padL + (plotW * i) / (n - 1);
@@ -536,9 +690,14 @@ function renderCashChart(months) {
   const pts = months.map((m, i) => [xScale(i), yScale(m.cashBalance)]);
   const linePath = pts.map((p, i) => (i === 0 ? "M" : "L") + p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ");
   const areaPath = `M${pts[0][0].toFixed(1)},${zeroY.toFixed(1)} ` + pts.map(p => `L${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ") + ` L${pts[pts.length - 1][0].toFixed(1)},${zeroY.toFixed(1)} Z`;
-  const dotsSvg = pts.map((p, i) => `<circle class="pt-mark" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5" fill="${COLOR_SERIES_1}"><title>Month ${months[i].m}: Cash ${fmtUSD(months[i].cashBalance)}</title></circle>`).join("");
+  const dotsSvg = pts.map((p, i) => `<circle class="pt-mark" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="${COLOR_SERIES_1}"><title>${monthTooltipLabel(months[i], n)}: Cash ${fmtUSD(months[i].cashBalance)}</title></circle>`).join("");
   let labelsSvg = "";
-  months.forEach((m, i) => { labelsSvg += `<text x="${xScale(i).toFixed(1)}" y="${H - 8}" text-anchor="middle" font-size="9" fill="${COLOR_MUTED}">M${m.m}</text>`; });
+  months.forEach((m, i) => {
+    if (shouldDrawLabel(m, n)) {
+      const text = n > 12 ? monthAxisLabel(m) : "M" + m.monthInYear;
+      labelsSvg += `<text x="${xScale(i).toFixed(1)}" y="${H - 8}" text-anchor="middle" font-size="9" fill="${COLOR_MUTED}">${text}</text>`;
+    }
+  });
   const zeroLineSvg = minV < 0 ? `<line x1="${padL}" y1="${zeroY.toFixed(1)}" x2="${W - padR}" y2="${zeroY.toFixed(1)}" stroke="${COLOR_BASELINE}" stroke-width="1.2"/>` : "";
 
   document.getElementById("chartCash").innerHTML = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cumulative cash balance by month">
@@ -550,9 +709,8 @@ function renderCashChart(months) {
   </svg>`;
 }
 
-function computeRevenueMixBreakdown(model) {
-  const rev = model.rev;
-  const totalVolume = model.annual.volume;
+function computeRevenueMixBreakdown(agg, rev) {
+  const totalVolume = agg.volume;
   const items = [];
   items.push({ label: "Exam fees", value: totalVolume * rev.examRevenuePerVisit });
   state.revenue.mix.forEach(row => {
@@ -587,7 +745,14 @@ function donutSlicePath(cx, cy, rOuter, rInner, startAngle, endAngle) {
 function renderRevenueMixChart(model) {
   const container = document.getElementById("chartRevenueMix");
   if (!container) return;
-  const { items, total } = computeRevenueMixBreakdown(model);
+  const { agg, label } = getViewSlice(model);
+  const titleEl = document.getElementById("chartMixTitle");
+  // "2-Year Total Revenue Mix" reads awkwardly (like "Total Revenue" is the
+  // category) — drop "Total" just for this title, Year 1/Year 2 unaffected.
+  const mixLabel = currentView === "total" ? "2-Year" : label;
+  if (titleEl) titleEl.textContent = mixLabel + " Revenue Mix";
+
+  const { items, total } = computeRevenueMixBreakdown(agg, model.rev);
   const visible = items.filter(i => i.value > 0);
 
   if (total <= 0 || visible.length === 0) {
@@ -629,7 +794,7 @@ function renderRevenueMixChart(model) {
 
   container.innerHTML = `
     <div class="pie-chart-row">
-      <svg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Year 1 revenue mix by category">
+      <svg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Revenue mix by category">
         ${slicesSvg}
         ${centerLabel}
       </svg>
@@ -639,8 +804,14 @@ function renderRevenueMixChart(model) {
 }
 
 function renderCharts(model) {
-  renderRevenueEbitdaChart(model.months);
-  renderCashChart(model.months);
+  const { months, label } = getViewSlice(model);
+  const ebitdaTitleEl = document.getElementById("chartRevenueEbitdaTitle");
+  if (ebitdaTitleEl) ebitdaTitleEl.textContent = "Revenue & EBITDA by Month — " + label;
+  const cashTitleEl = document.getElementById("chartCashTitle");
+  if (cashTitleEl) cashTitleEl.textContent = "Cumulative Cash Balance — " + label;
+
+  renderRevenueEbitdaChart(months);
+  renderCashChart(months);
   renderRevenueMixChart(model);
 }
 
@@ -655,7 +826,8 @@ function recalcAndRender() {
   updateStaffTotalDisplay();
   updateCapexTotalDisplay();
   renderKPIs(model);
-  renderMonthlyTable(model);
+  renderYearSummary(model);
+  updateTableCardSections(model);
   renderCharts(model);
 }
 
@@ -899,6 +1071,12 @@ function bindAssumptionsToggle() {
 function bindResetButton() {
   document.getElementById("resetDefaultsBtn").addEventListener("click", () => {
     state = deepClone(DEFAULTS);
+    currentView = "total";
+    document.querySelectorAll(".view-tab-btn").forEach(b => {
+      const isTotal = b.getAttribute("data-view") === "total";
+      b.classList.toggle("active", isTotal);
+      b.setAttribute("aria-selected", String(isTotal));
+    });
     fullRenderAssumptionInputs();
     recalcAndRender();
   });
@@ -911,6 +1089,7 @@ function init() {
   bindMarketingMonthlyGrid();
   bindDynamicTableEvents();
   bindScenarioTabs();
+  bindViewTabs();
   bindAssumptionsToggle();
   bindResetButton();
   bindAdminSection();

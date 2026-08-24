@@ -11,7 +11,7 @@
 <header class="page-header">
   <div class="header-inner">
     <h1>God's Eyes · Financial Model</h1>
-    <p class="subtitle">B2C Homecare (Children) · Year 1 projection · All inputs editable · Updates live</p>
+    <p class="subtitle">B2C Homecare (Children) · 2-Year projection · All inputs editable · Updates live</p>
   </div>
 </header>
 
@@ -24,13 +24,24 @@
     <button class="scenario-btn" data-scenario="optimistic" role="tab">Optimistic</button>
   </section>
 
+  <!-- View tabs — single control driving KPI cards, both charts, the
+       revenue-mix pie, AND the Monthly P&L section below all at once -->
+  <section class="view-tabs-row">
+    <span class="view-tabs-label">Showing:</span>
+    <div class="view-tabs" role="tablist" aria-label="Choose time period">
+      <button class="view-tab-btn active" data-view="total" role="tab" aria-selected="true">2-Year Total</button>
+      <button class="view-tab-btn" data-view="1" role="tab" aria-selected="false">Year 1</button>
+      <button class="view-tab-btn" data-view="2" role="tab" aria-selected="false">Year 2</button>
+    </div>
+  </section>
+
   <!-- KPI cards -->
   <section class="kpi-grid" id="kpiGrid"></section>
 
   <!-- Charts -->
   <section class="charts-grid">
     <div class="chart-card">
-      <h3>Revenue & EBITDA by Month</h3>
+      <h3 id="chartRevenueEbitdaTitle">Revenue & EBITDA by Month</h3>
       <div class="chart-legend">
         <span><span class="dot" style="background:var(--series-1)"></span>Revenue</span>
         <span><span class="dot" style="background:var(--series-2)"></span>EBITDA</span>
@@ -38,15 +49,21 @@
       <div id="chartRevenueEbitda"></div>
     </div>
     <div class="chart-card">
-      <h3>Year 1 Revenue Mix</h3>
+      <h3 id="chartMixTitle">Revenue Mix</h3>
       <div id="chartRevenueMix"></div>
     </div>
   </section>
 
-  <!-- Monthly table -->
+  <!-- Monthly P&L section — shows the 2-Year Summary comparison OR a single
+       year's 12-month detail table, depending on the view tabs above -->
   <section class="table-card">
-    <h3>Monthly P&amp;L — Year 1</h3>
-    <div class="table-scroll">
+    <h3 id="tableCardTitle">Monthly P&amp;L</h3>
+
+    <div class="year-summary-wrap" id="yearSummaryWrap">
+      <table id="yearSummaryTable" class="year-summary-table"></table>
+    </div>
+
+    <div class="table-scroll" id="monthlyTableWrap" style="display:none;">
       <table id="monthlyTable">
         <thead id="monthlyTableHead"></thead>
         <tbody id="monthlyTableBody"></tbody>
@@ -56,7 +73,7 @@
 
   <!-- Cumulative cash balance — full width, below the monthly rollout table -->
   <section class="chart-card chart-card-wide">
-    <h3>Cumulative Cash Balance</h3>
+    <h3 id="chartCashTitle">Cumulative Cash Balance</h3>
     <div class="chart-legend">
       <span><span class="dot" style="background:var(--series-1)"></span>Month-end cash</span>
     </div>
@@ -83,8 +100,14 @@
             <span class="field-note">Freely editable — see note below. (Month 1 itself is closed by default — see Active Months.)</span>
           </div>
           <div class="field">
-            <label for="volGrowth">Quarterly growth (%)</label>
+            <label for="volGrowth">Quarterly growth, Year 1 (%)</label>
             <input type="number" id="volGrowth" step="0.1">
+            <span class="field-note">Applies to Year 1 only — 4 quarter-by-quarter steps.</span>
+          </div>
+          <div class="field">
+            <label for="volAnnualGrowth">Annual growth, Year 2 (%)</label>
+            <input type="number" id="volAnnualGrowth" step="0.1">
+            <span class="field-note">Year 2 doesn't keep compounding quarterly — it steps up ONCE, flat for its 12 months, applied to Year 1's exit run-rate.</span>
           </div>
           <div class="field">
             <label for="volCapacity">Capacity cap (visits/day/team) — reference only</label>
@@ -97,9 +120,9 @@
             <span class="field-note">Not used in the calculations — for reference only.</span>
           </div>
         </div>
-        <h3 style="margin-top:16px;">Active Months</h3>
-        <div class="month-toggle-grid" id="monthActiveGrid"></div>
-        <span class="field-note">Click a month to mark it closed (e.g. Tet or another holiday) — that month's visits drop to 0. Fixed overhead and staff cost still apply, since salaried staff are still paid during the closure.</span>
+        <h3 style="margin-top:16px;">Active Months (2 years)</h3>
+        <div id="monthActiveGrid"></div>
+        <span class="field-note">Click a month to mark it closed (e.g. Tet or another holiday) — that month's visits drop to 0. Fixed overhead and any already-started staff cost still apply, since salaried/started staff are still paid during the closure. Visit counts are always whole numbers (rounded).</span>
       </div>
 
       <!-- B. Revenue per visit -->
@@ -144,9 +167,9 @@
 
       <!-- C. Marketing budget & variable cost rates -->
       <div class="assump-block">
-        <h3>C. Marketing Budget & Variable Cost Rates</h3>
-        <div class="month-budget-grid" id="marketingMonthlyGrid"></div>
-        <span class="field-note">Fixed $ schedule, one free input per month — not tied to revenue or visit volume, and NOT zeroed out by Active Months (branding/market-education spend keeps running even during a closed/holiday month). Default: $10k/mo for the first 3 months, $5k/mo from month 4 on — adjust any month freely.</span>
+        <h3>C. Marketing Budget & Variable Cost Rates (2 years)</h3>
+        <div id="marketingMonthlyGrid"></div>
+        <span class="field-note">Fixed $ schedule, one free input per month across both years — not tied to revenue or visit volume, and NOT zeroed out by Active Months (branding/market-education spend keeps running even during a closed/holiday month). Default: $10k/mo for the first 3 months, $5k/mo every month after that through the end of Year 2 — adjust any month freely.</span>
 
         <h3 style="margin-top:16px;">Other Variable Cost Rates</h3>
         <div class="field-grid">
@@ -188,6 +211,7 @@
               <th class="col-basis-check">Per-exam?</th>
               <th class="col-count">Count</th>
               <th class="col-rate">Rate</th>
+              <th class="col-start">Start (Year/Month)</th>
               <th class="col-amount">Total</th>
               <th class="col-remove"></th>
             </tr>
@@ -195,7 +219,7 @@
           <tbody id="headcountRows"></tbody>
         </table>
         <button class="add-row-btn" id="addHeadcountRow" type="button">+ Add role</button>
-        <span class="field-note">Tick "Per-exam?" for roles already salaried elsewhere (e.g. shared with Alina) — their cost becomes a stipend paid per CHILD examined that month (a visit with a companion counts as 2 exams), instead of a fixed monthly salary. Each row remembers both rates, so toggling back and forth doesn't lose what you typed.</span>
+        <span class="field-note">Tick "Per-exam?" for roles already salaried elsewhere (e.g. shared with Alina) — their cost becomes a stipend paid per CHILD examined that month (a visit with a companion counts as 2 exams), instead of a fixed monthly salary. Each row remembers both rates, so toggling back and forth doesn't lose what you typed. "Start (Year/Month)" is when that role's cost begins — before that point it costs $0, so you can phase in hires as visit volume grows instead of paying every role from Month 1 of Year 1.</span>
         <div class="mix-total-row">Staff cost: <span id="staffTotalDisplay">—</span></div>
       </div>
 
@@ -212,7 +236,7 @@
             <input type="number" id="optimisticAdj" step="1">
           </div>
         </div>
-        <span class="field-note">Applied only to visit volume — pricing, CVR, mix, staffing, and overhead stay the same across all 3 scenarios.</span>
+        <span class="field-note">Applied only to visit volume — pricing, CVR, mix, staffing, and overhead stay the same across all 3 scenarios (Conservative/Base/Optimistic — not to be confused with the Year 1/Year 2 view tabs above).</span>
       </div>
 
       <!-- G. Capital & CapEx -->
@@ -231,6 +255,7 @@
             <tr>
               <th>Item</th>
               <th class="col-amount">Amount ($)</th>
+              <th class="col-year">Year #</th>
               <th class="col-month">Month #</th>
               <th class="col-remove"></th>
             </tr>
@@ -238,7 +263,8 @@
           <tbody id="capexRows"></tbody>
         </table>
         <button class="add-row-btn" id="addCapexRow" type="button">+ Add CapEx item</button>
-        <div class="mix-total-row">Total Year 1 CapEx: <span id="capexTotalDisplay">—</span></div>
+        <span class="field-note">Year # (1-2) + Month # (1-12) together place the spend on the 2-year timeline — e.g. Year 2, Month 7 is absolute month 19.</span>
+        <div class="mix-total-row">Total CapEx (both years): <span id="capexTotalDisplay">—</span></div>
       </div>
 
       <!-- H. Admin — Save as Default -->

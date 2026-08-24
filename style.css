@@ -327,6 +327,22 @@ html, body {
   color: var(--critical) !important;
 }
 
+/* ---------- Month groups (Active Months / Marketing grid, grouped by year) ---------- */
+.month-group {
+  margin-top: 10px;
+}
+.month-group:first-child {
+  margin-top: 8px;
+}
+.month-group-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 6px;
+}
+
 .note-box {
   background: var(--warning-bg);
   border: 1px solid var(--warning-border);
@@ -395,6 +411,8 @@ html, body {
 .dyn-table .col-rate { width: 150px; }
 .dyn-table .col-basis-check { width: 76px; text-align: center; }
 .dyn-table .col-basis-check input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+.dyn-table .col-start { width: 118px; }
+.dyn-table .col-year { width: 70px; }
 
 .dyn-table .col-remove { width: 36px; text-align: center; }
 
@@ -408,6 +426,23 @@ html, body {
   font-size: 11px;
   color: var(--text-muted);
   white-space: nowrap;
+}
+
+.start-cell {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.start-cell input {
+  width: 32px;
+  min-width: 0;
+  padding: 6px 3px;
+  text-align: center;
+}
+.start-label {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-weight: 600;
 }
 
 .row-remove-btn {
@@ -607,6 +642,94 @@ html, body {
 }
 
 .table-card h3 { margin: 0 0 10px 0; font-size: 14px; font-weight: 700; }
+
+/* ---------- 3-Year Summary (always visible, no scrolling needed) ---------- */
+.year-summary-wrap {
+  overflow-x: auto;
+  margin-bottom: 16px;
+}
+
+.year-summary-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  width: 100%;
+  min-width: 480px;
+}
+
+.year-summary-table th, .year-summary-table td {
+  padding: 7px 12px;
+  text-align: right;
+  border-bottom: 1px solid var(--gridline);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.year-summary-table th:first-child, .year-summary-table td:first-child {
+  text-align: left;
+  color: var(--text-secondary);
+}
+
+.year-summary-table thead th {
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  border-bottom: 1px solid var(--border);
+}
+
+.year-summary-table thead th:last-child {
+  color: var(--series-1);
+}
+
+.year-summary-table tbody tr:last-child td { border-bottom: none; }
+.year-summary-table td:last-child { font-weight: 700; background: #f4f8fd; }
+.year-summary-table td.negative { color: var(--critical); }
+.year-summary-table td.positive { color: var(--good); }
+
+/* ---------- View tabs (2-Year Total / Year 1 / Year 2) — the single control
+   driving KPI cards, both charts, the revenue-mix pie, and the Monthly P&L
+   section further down the page ---------- */
+.view-tabs-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.view-tabs-label {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.view-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.view-tab-btn {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.view-tab-btn:hover {
+  border-color: var(--series-1);
+  color: var(--text-primary);
+}
+
+.view-tab-btn.active {
+  background: var(--series-1);
+  border-color: var(--series-1);
+  color: #fff;
+}
 
 .table-scroll { overflow-x: auto; }
 

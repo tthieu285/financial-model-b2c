@@ -3,6 +3,12 @@
    The full calculation engine + rendering + interaction lives in this one file.
    Every input on the page is freely editable — no input is locked or
    auto-derived from another input.
+
+   MODEL HORIZON: 2 years / 24 months (matches the actual ask from leadership
+   — see mục 24 of the build log). Year 1 ramps quarter-by-quarter via
+   `quarterlyGrowth`. Year 2 steps up ONCE, flat for all 12 months, via the
+   new `annualGrowth` rate applied to Year 1's exit run-rate — see
+   computeVolumeForMonth() below.
    ============================================================================ */
 
 /* ---------------------------------------------------------------------------
@@ -15,6 +21,10 @@ const ADMIN_CONFIG = {
   pin: "2468"
 };
 
+const YEARS_IN_MODEL = 2;
+const MONTHS_PER_YEAR = 12;
+const TOTAL_MONTHS = YEARS_IN_MODEL * MONTHS_PER_YEAR;
+
 /* ---------------------------------------------------------------------------
    1. DEFAULT ASSUMPTIONS — matches the final v3 spec / the Excel reference file
    --------------------------------------------------------------------------- */
@@ -22,182 +32,94 @@ const ADMIN_CONFIG = {
    tool every time it's used. Hand edits here are fine, but will be
    overwritten the next time someone saves new defaults from the page. === */
 const DEFAULTS = {
-  "volume": {
-    "baseVolume": 50,
-    "quarterlyGrowth": 0.5,
-    "capacityPerDayPerTeam": 7,
-    "teams": 1,
-    "monthActive": [
-      false,
-      true,
-      true,
-      true,
-      true,
-      false,
-      true,
-      true,
-      true,
-      true,
-      true,
-      true
+  volume: {
+    baseVolume: 50,          // month 1-3 visits (Q1 rate) — FREE INPUT, see UI note
+    quarterlyGrowth: 0.5,    // step-wise quarterly growth, Year 1 only
+    annualGrowth: 0.2,       // Year 2 steps up ONCE, applied to Year 1's exit
+                             // run-rate — placeholder, review/confirm with
+                             // your boss like the other assumptions
+    capacityPerDayPerTeam: 7, // reference only, NOT used in the formulas
+    teams: 1,
+    // Which of the 24 months (2 years x 12) the team is actually operating.
+    // Unchecking a month (e.g. Tet/a holiday closure, or a ramp-up month with
+    // no revenue yet) sets that month's visits to 0. Fixed overhead and staff
+    // cost still apply (salaried/started staff are still paid). Default:
+    // Year 1 M1 (too early to have revenue yet) and M6 are closed; Year 2
+    // defaults to fully open.
+    monthActive: [
+      false, true, true, true, true, false, true, true, true, true, true, true, // Year 1
+      true, true, true, true, true, true, true, true, true, true, true, true    // Year 2
     ]
   },
-  "revenue": {
-    "examFeePrimary": 30,
-    "pCompanion": 0.3,
-    "examFeeCompanion": 15,
-    "cvr": 0.85,
-    "mix": [
-      {
-        "label": "Standard frame glasses + Atropine",
-        "share": 0.285,
-        "price": 52
-      },
-      {
-        "label": "Myopia-control frame glasses — $120 tier (~VND 3M)",
-        "share": 0.475,
-        "price": 120
-      },
-      {
-        "label": "Myopia-control frame glasses — $280 tier (~VND 7M)",
-        "share": 0.19,
-        "price": 280
-      },
-      {
-        "label": "Ortho-K - $700 (~VND 18M)",
-        "share": 0.05,
-        "price": 700
-      }
+  revenue: {
+    examFeePrimary: 30,
+    pCompanion: 0.3,
+    examFeeCompanion: 15,
+    cvr: 0.85,
+    mix: [
+      { label: "Standard frame glasses + Atropine", share: 0.285, price: 52 },
+      { label: "Myopia-control frame glasses — $120 tier (~VND 3M)", share: 0.475, price: 120 },
+      { label: "Myopia-control frame glasses — $280 tier (~VND 7M)", share: 0.19, price: 280 },
+      { label: "Ortho-K - $700 (~VND 18M)", share: 0.05, price: 700 }
     ]
   },
-  "marketing": {
-    "monthlyBudget": [
-      10000,
-      10000,
-      10000,
-      5000,
-      5000,
-      5000,
-      5000,
-      5000,
-      5000,
-      5000,
-      5000,
-      5000
+  // Fixed $ schedule, one editable field per month across both years — NOT a
+  // % of revenue, and NOT zeroed out by Active Months (branding/market-
+  // education spend keeps running even during a closed/holiday month).
+  // Default: $10k/mo for the first 3 months (branding push), $5k/mo from
+  // month 4 through the end of Year 2 — every month is its own free input,
+  // this is just the starting point.
+  marketing: {
+    monthlyBudget: [
+      10000, 10000, 10000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, // Year 1
+      5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000     // Year 2
     ]
   },
-  "costRates": {
-    "logisticsPerVisit": 5,
-    "cogsPct": 0.45
+  costRates: {
+    logisticsPerVisit: 5,
+    cogsPct: 0.45
   },
-  "fixedOverhead": [
-    {
-      "label": "Software maintenance/subscription",
-      "amount": 500
-    }
+  fixedOverhead: [
+    { label: "Software maintenance/subscription", amount: 500 }
   ],
-  "headcount": [
-    {
-      "role": "Doctor",
-      "count": 1,
-      "basis": "exam",
-      "monthlyRate": 0,
-      "examRate": 3.5
-    },
-    {
-      "role": "Optometrist",
-      "count": 1,
-      "basis": "exam",
-      "monthlyRate": 0,
-      "examRate": 2
-    },
-    {
-      "role": "Customer Care / Ops / Scheduling",
-      "count": 1,
-      "basis": "month",
-      "monthlyRate": 600,
-      "examRate": 0
-    },
-    {
-      "role": "Doctor Fix 1",
-      "count": 1,
-      "basis": "month",
-      "monthlyRate": 800,
-      "examRate": 0
-    },
-    {
-      "role": "Optometrist Fix 1",
-      "count": 1,
-      "basis": "month",
-      "monthlyRate": 500,
-      "examRate": 0
-    },
-    {
-      "role": "Driver 1",
-      "count": 1,
-      "basis": "month",
-      "monthlyRate": 600,
-      "examRate": 0
-    },
-    {
-      "role": "Driver 2",
-      "count": 1,
-      "basis": "month",
-      "monthlyRate": 300,
-      "examRate": 0
-    },
-    {
-      "role": "Doctor Fix 2",
-      "count": 1,
-      "basis": "month",
-      "monthlyRate": 400,
-      "examRate": 0
-    },
-    {
-      "role": "Optometrist Fix 2",
-      "count": 1,
-      "basis": "month",
-      "monthlyRate": 250,
-      "examRate": 0
-    }
+  // Each role is EITHER a fixed monthly salary (basis:"month", uses
+  // monthlyRate) OR a per-exam stipend (basis:"exam", uses examRate) —
+  // "per exam" means per CHILD examined, not per household visit: a visit
+  // with a companion counts as 2 exams (see calcModel, multiplied by
+  // rev.expectedChildrenPerVisit). Both rate fields are kept on every row
+  // (not just the active one) so switching the toggle in the UI doesn't
+  // lose whatever was typed into the other field. Doctor + Optometrist are
+  // already salaried elsewhere (shared with Alina) so this project only pays
+  // them a per-exam stipend; everyone else is a dedicated hire on a fixed
+  // salary. startYear/startMonth control when a role's cost begins — before
+  // that point it costs $0, so headcount can be phased in as visit volume
+  // grows instead of everyone being "hired" from Month 1 of Year 1.
+  headcount: [
+    { role: "Doctor", count: 1, basis: "exam", monthlyRate: 0, examRate: 3.5, startYear: 1, startMonth: 1 },
+    { role: "Optometrist", count: 1, basis: "exam", monthlyRate: 0, examRate: 2, startYear: 1, startMonth: 1 },
+    { role: "Customer Care / Ops / Scheduling", count: 1, basis: "month", monthlyRate: 600, examRate: 0, startYear: 1, startMonth: 1 },
+    { role: "Doctor Fix 1", count: 1, basis: "month", monthlyRate: 800, examRate: 0, startYear: 1, startMonth: 1 },
+    { role: "Optometrist Fix 1", count: 1, basis: "month", monthlyRate: 500, examRate: 0, startYear: 1, startMonth: 1 },
+    { role: "Driver 1", count: 1, basis: "month", monthlyRate: 600, examRate: 0, startYear: 1, startMonth: 1 },
+    { role: "Driver 2", count: 1, basis: "month", monthlyRate: 300, examRate: 0, startYear: 1, startMonth: 1 },
+    { role: "Doctor Fix 2", count: 1, basis: "month", monthlyRate: 400, examRate: 0, startYear: 1, startMonth: 1 },
+    { role: "Optometrist Fix 2", count: 1, basis: "month", monthlyRate: 250, examRate: 0, startYear: 1, startMonth: 1 }
   ],
-  "scenario": {
-    "conservativeAdj": -0.3,
-    "optimisticAdj": 0.3
+  scenario: {
+    conservativeAdj: -0.30,
+    optimisticAdj: 0.30
   },
-  "capital": {
-    "totalInvestment": 250000,
-    "capexItems": [
-      {
-        "label": "Equipment 1",
-        "amount": 20000,
-        "month": 1
-      },
-      {
-        "label": "Booking software/app — phase 1",
-        "amount": 15000,
-        "month": 1
-      },
-      {
-        "label": "Booking software/app — phase 2",
-        "amount": 15000,
-        "month": 7
-      },
-      {
-        "label": "Van 1",
-        "amount": 40000,
-        "month": 1
-      },
-      {
-        "label": "Van 2",
-        "amount": 40000,
-        "month": 7
-      },
-      {
-        "label": "Equipment 2",
-        "amount": 20000,
-        "month": 7
-      }
+  capital: {
+    totalInvestment: 250000,
+    // Each CapEx item now has BOTH a year (1-2) and a month (1-12) so spend
+    // can land anywhere across the 2-year horizon, not just within Year 1.
+    capexItems: [
+      { label: "Equipment 1", amount: 20000, year: 1, month: 1 },
+      { label: "Booking software/app — phase 1", amount: 15000, year: 1, month: 1 },
+      { label: "Booking software/app — phase 2", amount: 15000, year: 1, month: 7 },
+      { label: "Van 1", amount: 40000, year: 1, month: 1 },
+      { label: "Van 2", amount: 40000, year: 1, month: 7 },
+      { label: "Equipment 2", amount: 20000, year: 1, month: 7 }
     ]
   }
 };
@@ -238,6 +160,29 @@ function scenarioAdjustment(s, scenarioKey) {
   return 0;
 }
 
+/* Raw (pre-scenario-adjustment, pre-active-toggle, pre-rounding) visit volume
+   for a given ABSOLUTE month (1-24). Year 1 ramps quarter by quarter, exactly
+   as before. Year 2 does NOT keep compounding quarterly — it's a single flat
+   step applied once to Year 1's exit (Q4) run-rate, per `annualGrowth`. This
+   keeps the 2-year projection from compounding a quarterly rate into an
+   unrealistic number in Year 2. */
+function computeVolumeForMonth(s, absMonth) {
+  const base = Number(s.volume.baseVolume || 0);
+  const qGrowth = Number(s.volume.quarterlyGrowth || 0);
+  const aGrowth = Number(s.volume.annualGrowth || 0);
+
+  const year = Math.ceil(absMonth / MONTHS_PER_YEAR);
+  const monthInYear = absMonth - (year - 1) * MONTHS_PER_YEAR;
+
+  if (year === 1) {
+    const q = Math.ceil(monthInYear / 3);
+    return base * Math.pow(1 + qGrowth, q - 1);
+  }
+
+  const year1ExitRate = base * Math.pow(1 + qGrowth, 3); // Year 1 Q4 run-rate
+  return year1ExitRate * (1 + aGrowth); // Year 2 — flat for all 12 months
+}
+
 function calcModel(s, scenarioKey) {
   const rev = computeRevenuePerVisit(s);
   const adj = scenarioAdjustment(s, scenarioKey);
@@ -246,10 +191,18 @@ function calcModel(s, scenarioKey) {
   const months = [];
   let cashBalance = 0;
 
-  for (let m = 1; m <= 12; m++) {
-    const q = Math.ceil(m / 3);
-    const active = s.volume.monthActive && s.volume.monthActive[m - 1] !== undefined ? !!s.volume.monthActive[m - 1] : true;
-    const volume = active ? (Number(s.volume.baseVolume || 0) * Math.pow(1 + Number(s.volume.quarterlyGrowth || 0), q - 1) * (1 + adj)) : 0;
+  for (let m = 1; m <= TOTAL_MONTHS; m++) {
+    const year = Math.ceil(m / MONTHS_PER_YEAR);
+    const monthInYear = m - (year - 1) * MONTHS_PER_YEAR;
+    const q = Math.ceil(monthInYear / 3); // quarter WITHIN the year (1-4)
+    const activeArr = s.volume.monthActive;
+    const active = activeArr && activeArr[m - 1] !== undefined ? !!activeArr[m - 1] : true;
+
+    const rawVolume = computeVolumeForMonth(s, m);
+    // Visits are a count of people — always a whole number. Rounded once,
+    // right here, so every downstream $ figure derives from an integer visit
+    // count instead of a fractional one.
+    const volume = active ? Math.round(rawVolume * (1 + adj)) : 0;
 
     const monthlyRevenue = volume * rev.totalRevenuePerVisit;
     const examRevenue = volume * rev.examRevenuePerVisit;
@@ -263,13 +216,18 @@ function calcModel(s, scenarioKey) {
     const variableCost = cogs + marketing + logistics;
     const grossProfit = monthlyRevenue - variableCost;
 
-    // Staff cost now depends on `volume`, so it's computed per-month rather
-    // than once outside the loop: "month" basis roles are a flat salary
-    // regardless of volume. "exam" basis roles are paid per CHILD examined,
-    // not per household visit — a visit with a companion is 2 exams, so the
+    // Staff cost depends on `volume`, so it's computed per-month rather than
+    // once outside the loop: "month" basis roles are a flat salary once
+    // hired. "exam" basis roles are paid per CHILD examined, not per
+    // household visit — a visit with a companion is 2 exams, so the
     // per-visit volume is scaled up by rev.expectedChildrenPerVisit (the
-    // same expected-value factor already used for treatment revenue).
+    // same expected-value factor already used for treatment revenue). A role
+    // costs $0 in any month before its startYear/startMonth — lets headcount
+    // be phased in as volume grows instead of every role costing money from
+    // Month 1 of Year 1.
     const staffCostMonthly = s.headcount.reduce((sum, r) => {
+      const startPeriod = (Number(r.startYear || 1) - 1) * MONTHS_PER_YEAR + Number(r.startMonth || 1);
+      if (m < startPeriod) return sum;
       const isExam = r.basis === "exam";
       const rate = isExam ? Number(r.examRate || 0) : Number(r.monthlyRate || 0);
       const amt = Number(r.count || 0) * rate;
@@ -278,39 +236,50 @@ function calcModel(s, scenarioKey) {
 
     const ebitda = grossProfit - fixedOverheadMonthly - staffCostMonthly;
 
-    const capex = s.capital.capexItems.reduce((sum, item) => sum + (Number(item.month) === m ? Number(item.amount || 0) : 0), 0);
+    // Each CapEx item fires on its own (year, month) — converted to the same
+    // absolute month numbering as everything else in this loop.
+    const capex = s.capital.capexItems.reduce((sum, item) => {
+      const itemAbsMonth = (Number(item.year || 1) - 1) * MONTHS_PER_YEAR + Number(item.month || 1);
+      return sum + (itemAbsMonth === m ? Number(item.amount || 0) : 0);
+    }, 0);
     const netCashFlow = ebitda - capex;
 
     cashBalance = (m === 1 ? Number(s.capital.totalInvestment || 0) : cashBalance) + netCashFlow;
 
     months.push({
-      m, q, active, volume, monthlyRevenue, examRevenue, treatmentRevenue, cogs, marketing, logistics,
+      m, year, monthInYear, q, active, volume, monthlyRevenue, examRevenue, treatmentRevenue, cogs, marketing, logistics,
       variableCost, grossProfit, fixedOverheadMonthly, staffCostMonthly, ebitda, capex, netCashFlow, cashBalance
     });
   }
 
-  const annual = months.reduce((acc, mo) => {
-    acc.volume += mo.volume;
-    acc.monthlyRevenue += mo.monthlyRevenue;
-    acc.examRevenue += mo.examRevenue;
-    acc.treatmentRevenue += mo.treatmentRevenue;
-    acc.cogs += mo.cogs;
-    acc.marketing += mo.marketing;
-    acc.logistics += mo.logistics;
-    acc.variableCost += mo.variableCost;
-    acc.grossProfit += mo.grossProfit;
-    acc.fixedOverheadMonthly += mo.fixedOverheadMonthly;
-    acc.staffCostMonthly += mo.staffCostMonthly;
-    acc.ebitda += mo.ebitda;
-    acc.capex += mo.capex;
-    acc.netCashFlow += mo.netCashFlow;
+  function aggregate(monthsSlice) {
+    const acc = monthsSlice.reduce((a, mo) => {
+      a.volume += mo.volume;
+      a.monthlyRevenue += mo.monthlyRevenue;
+      a.examRevenue += mo.examRevenue;
+      a.treatmentRevenue += mo.treatmentRevenue;
+      a.cogs += mo.cogs;
+      a.marketing += mo.marketing;
+      a.logistics += mo.logistics;
+      a.variableCost += mo.variableCost;
+      a.grossProfit += mo.grossProfit;
+      a.fixedOverheadMonthly += mo.fixedOverheadMonthly;
+      a.staffCostMonthly += mo.staffCostMonthly;
+      a.ebitda += mo.ebitda;
+      a.capex += mo.capex;
+      a.netCashFlow += mo.netCashFlow;
+      return a;
+    }, { volume: 0, monthlyRevenue: 0, examRevenue: 0, treatmentRevenue: 0, cogs: 0, marketing: 0, logistics: 0, variableCost: 0, grossProfit: 0, fixedOverheadMonthly: 0, staffCostMonthly: 0, ebitda: 0, capex: 0, netCashFlow: 0 });
+    acc.endingCash = monthsSlice[monthsSlice.length - 1].cashBalance;
+    acc.ebitdaMargin = acc.monthlyRevenue !== 0 ? acc.ebitda / acc.monthlyRevenue : 0;
     return acc;
-  }, { volume: 0, monthlyRevenue: 0, examRevenue: 0, treatmentRevenue: 0, cogs: 0, marketing: 0, logistics: 0, variableCost: 0, grossProfit: 0, fixedOverheadMonthly: 0, staffCostMonthly: 0, ebitda: 0, capex: 0, netCashFlow: 0 });
+  }
 
-  annual.endingCash = months[11].cashBalance;
-  annual.ebitdaMargin = annual.monthlyRevenue !== 0 ? annual.ebitda / annual.monthlyRevenue : 0;
+  // Per-year totals (Year 1 / Year 2) plus the full 2-year total.
+  const years = [1, 2].map(y => aggregate(months.slice((y - 1) * MONTHS_PER_YEAR, y * MONTHS_PER_YEAR)));
+  const total2yr = aggregate(months);
 
-  return { rev, months, annual };
+  return { rev, months, years, total2yr };
 }
 
 /* Expose for console debugging / cross-check if needed */
