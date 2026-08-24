@@ -219,7 +219,7 @@ const DEFAULTS = {
     "optimisticAdj": 0.3
   },
   "capital": {
-    "totalInvestment": 150000,
+    "totalInvestment": 200000,
     "capexItems": [
       {
         "label": "Equipment 1",
