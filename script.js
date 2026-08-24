@@ -219,7 +219,7 @@ const DEFAULTS = {
     "optimisticAdj": 0.3
   },
   "capital": {
-    "totalInvestment": 200000,
+    "totalInvestment": 250000,
     "capexItems": [
       {
         "label": "Equipment 1",
@@ -241,13 +241,13 @@ const DEFAULTS = {
       },
       {
         "label": "Van 1",
-        "amount": 40000,
+        "amount": 60000,
         "year": 1,
         "month": 1
       },
       {
         "label": "Van 2",
-        "amount": 40000,
+        "amount": 60000,
         "year": 1,
         "month": 7
       },
