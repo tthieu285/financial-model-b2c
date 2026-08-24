@@ -32,94 +32,231 @@ const TOTAL_MONTHS = YEARS_IN_MODEL * MONTHS_PER_YEAR;
    tool every time it's used. Hand edits here are fine, but will be
    overwritten the next time someone saves new defaults from the page. === */
 const DEFAULTS = {
-  volume: {
-    baseVolume: 50,          // month 1-3 visits (Q1 rate) — FREE INPUT, see UI note
-    quarterlyGrowth: 0.5,    // step-wise quarterly growth, Year 1 only
-    annualGrowth: 0.2,       // Year 2 steps up ONCE, applied to Year 1's exit
-                             // run-rate — placeholder, review/confirm with
-                             // your boss like the other assumptions
-    capacityPerDayPerTeam: 7, // reference only, NOT used in the formulas
-    teams: 1,
-    // Which of the 24 months (2 years x 12) the team is actually operating.
-    // Unchecking a month (e.g. Tet/a holiday closure, or a ramp-up month with
-    // no revenue yet) sets that month's visits to 0. Fixed overhead and staff
-    // cost still apply (salaried/started staff are still paid). Default:
-    // Year 1 M1 (too early to have revenue yet) and M6 are closed; Year 2
-    // defaults to fully open.
-    monthActive: [
-      false, true, true, true, true, false, true, true, true, true, true, true, // Year 1
-      true, true, true, true, true, true, true, true, true, true, true, true    // Year 2
+  "volume": {
+    "baseVolume": 50,
+    "quarterlyGrowth": 0.5,
+    "annualGrowth": 0.2,
+    "capacityPerDayPerTeam": 7,
+    "teams": 1,
+    "monthActive": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
     ]
   },
-  revenue: {
-    examFeePrimary: 30,
-    pCompanion: 0.3,
-    examFeeCompanion: 15,
-    cvr: 0.85,
-    mix: [
-      { label: "Standard frame glasses + Atropine", share: 0.285, price: 52 },
-      { label: "Myopia-control frame glasses — $120 tier (~VND 3M)", share: 0.475, price: 120 },
-      { label: "Myopia-control frame glasses — $280 tier (~VND 7M)", share: 0.19, price: 280 },
-      { label: "Ortho-K - $700 (~VND 18M)", share: 0.05, price: 700 }
+  "revenue": {
+    "examFeePrimary": 30,
+    "pCompanion": 0.3,
+    "examFeeCompanion": 15,
+    "cvr": 0.85,
+    "mix": [
+      {
+        "label": "Standard frame glasses + Atropine",
+        "share": 0.285,
+        "price": 52
+      },
+      {
+        "label": "Myopia-control frame glasses — $120 tier (~VND 3M)",
+        "share": 0.475,
+        "price": 120
+      },
+      {
+        "label": "Myopia-control frame glasses — $280 tier (~VND 7M)",
+        "share": 0.19,
+        "price": 280
+      },
+      {
+        "label": "Ortho-K - $700 (~VND 18M)",
+        "share": 0.05,
+        "price": 700
+      }
     ]
   },
-  // Fixed $ schedule, one editable field per month across both years — NOT a
-  // % of revenue, and NOT zeroed out by Active Months (branding/market-
-  // education spend keeps running even during a closed/holiday month).
-  // Default: $10k/mo for the first 3 months (branding push), $5k/mo from
-  // month 4 through the end of Year 2 — every month is its own free input,
-  // this is just the starting point.
-  marketing: {
-    monthlyBudget: [
-      10000, 10000, 10000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, // Year 1
-      5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000     // Year 2
+  "marketing": {
+    "monthlyBudget": [
+      10000,
+      10000,
+      10000,
+      5000,
+      5000,
+      5000,
+      5000,
+      5000,
+      5000,
+      5000,
+      5000,
+      5000,
+      5000,
+      5000,
+      5000,
+      5000,
+      5000,
+      5000,
+      5000,
+      5000,
+      5000,
+      5000,
+      5000,
+      5000
     ]
   },
-  costRates: {
-    logisticsPerVisit: 5,
-    cogsPct: 0.45
+  "costRates": {
+    "logisticsPerVisit": 5,
+    "cogsPct": 0.45
   },
-  fixedOverhead: [
-    { label: "Software maintenance/subscription", amount: 500 }
+  "fixedOverhead": [
+    {
+      "label": "Software maintenance/subscription",
+      "amount": 500
+    }
   ],
-  // Each role is EITHER a fixed monthly salary (basis:"month", uses
-  // monthlyRate) OR a per-exam stipend (basis:"exam", uses examRate) —
-  // "per exam" means per CHILD examined, not per household visit: a visit
-  // with a companion counts as 2 exams (see calcModel, multiplied by
-  // rev.expectedChildrenPerVisit). Both rate fields are kept on every row
-  // (not just the active one) so switching the toggle in the UI doesn't
-  // lose whatever was typed into the other field. Doctor + Optometrist are
-  // already salaried elsewhere (shared with Alina) so this project only pays
-  // them a per-exam stipend; everyone else is a dedicated hire on a fixed
-  // salary. startYear/startMonth control when a role's cost begins — before
-  // that point it costs $0, so headcount can be phased in as visit volume
-  // grows instead of everyone being "hired" from Month 1 of Year 1.
-  headcount: [
-    { role: "Doctor", count: 1, basis: "exam", monthlyRate: 0, examRate: 3.5, startYear: 1, startMonth: 1 },
-    { role: "Optometrist", count: 1, basis: "exam", monthlyRate: 0, examRate: 2, startYear: 1, startMonth: 1 },
-    { role: "Customer Care / Ops / Scheduling", count: 1, basis: "month", monthlyRate: 600, examRate: 0, startYear: 1, startMonth: 1 },
-    { role: "Doctor Fix 1", count: 1, basis: "month", monthlyRate: 800, examRate: 0, startYear: 1, startMonth: 1 },
-    { role: "Optometrist Fix 1", count: 1, basis: "month", monthlyRate: 500, examRate: 0, startYear: 1, startMonth: 1 },
-    { role: "Driver 1", count: 1, basis: "month", monthlyRate: 600, examRate: 0, startYear: 1, startMonth: 1 },
-    { role: "Driver 2", count: 1, basis: "month", monthlyRate: 300, examRate: 0, startYear: 1, startMonth: 1 },
-    { role: "Doctor Fix 2", count: 1, basis: "month", monthlyRate: 400, examRate: 0, startYear: 1, startMonth: 1 },
-    { role: "Optometrist Fix 2", count: 1, basis: "month", monthlyRate: 250, examRate: 0, startYear: 1, startMonth: 1 }
+  "headcount": [
+    {
+      "role": "Doctor Comm",
+      "count": 1,
+      "basis": "exam",
+      "monthlyRate": 0,
+      "examRate": 3.5,
+      "startYear": 1,
+      "startMonth": 1
+    },
+    {
+      "role": "Optometrist Comm",
+      "count": 1,
+      "basis": "exam",
+      "monthlyRate": 0,
+      "examRate": 2,
+      "startYear": 1,
+      "startMonth": 1
+    },
+    {
+      "role": "Customer Care / Ops / Scheduling",
+      "count": 1,
+      "basis": "month",
+      "monthlyRate": 600,
+      "examRate": 0,
+      "startYear": 1,
+      "startMonth": 1
+    },
+    {
+      "role": "Doctor Fix 1",
+      "count": 1,
+      "basis": "month",
+      "monthlyRate": 800,
+      "examRate": 0,
+      "startYear": 1,
+      "startMonth": 1
+    },
+    {
+      "role": "Optometrist Fix 1",
+      "count": 1,
+      "basis": "month",
+      "monthlyRate": 500,
+      "examRate": 0,
+      "startYear": 1,
+      "startMonth": 1
+    },
+    {
+      "role": "Driver 1",
+      "count": 1,
+      "basis": "month",
+      "monthlyRate": 600,
+      "examRate": 0,
+      "startYear": 1,
+      "startMonth": 1
+    },
+    {
+      "role": "Driver 2",
+      "count": 1,
+      "basis": "month",
+      "monthlyRate": 300,
+      "examRate": 0,
+      "startYear": 1,
+      "startMonth": 7
+    },
+    {
+      "role": "Doctor Fix 2",
+      "count": 1,
+      "basis": "month",
+      "monthlyRate": 400,
+      "examRate": 0,
+      "startYear": 1,
+      "startMonth": 7
+    },
+    {
+      "role": "Optometrist Fix 2",
+      "count": 1,
+      "basis": "month",
+      "monthlyRate": 250,
+      "examRate": 0,
+      "startYear": 1,
+      "startMonth": 7
+    }
   ],
-  scenario: {
-    conservativeAdj: -0.30,
-    optimisticAdj: 0.30
+  "scenario": {
+    "conservativeAdj": -0.3,
+    "optimisticAdj": 0.3
   },
-  capital: {
-    totalInvestment: 250000,
-    // Each CapEx item now has BOTH a year (1-2) and a month (1-12) so spend
-    // can land anywhere across the 2-year horizon, not just within Year 1.
-    capexItems: [
-      { label: "Equipment 1", amount: 20000, year: 1, month: 1 },
-      { label: "Booking software/app — phase 1", amount: 15000, year: 1, month: 1 },
-      { label: "Booking software/app — phase 2", amount: 15000, year: 1, month: 7 },
-      { label: "Van 1", amount: 40000, year: 1, month: 1 },
-      { label: "Van 2", amount: 40000, year: 1, month: 7 },
-      { label: "Equipment 2", amount: 20000, year: 1, month: 7 }
+  "capital": {
+    "totalInvestment": 250000,
+    "capexItems": [
+      {
+        "label": "Equipment 1",
+        "amount": 20000,
+        "year": 1,
+        "month": 1
+      },
+      {
+        "label": "Booking software/app — phase 1",
+        "amount": 15000,
+        "year": 1,
+        "month": 1
+      },
+      {
+        "label": "Booking software/app — phase 2",
+        "amount": 15000,
+        "year": 1,
+        "month": 7
+      },
+      {
+        "label": "Van 1",
+        "amount": 40000,
+        "year": 1,
+        "month": 1
+      },
+      {
+        "label": "Van 2",
+        "amount": 40000,
+        "year": 1,
+        "month": 7
+      },
+      {
+        "label": "Equipment 2",
+        "amount": 20000,
+        "year": 1,
+        "month": 7
+      }
     ]
   }
 };
