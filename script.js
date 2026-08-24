@@ -133,7 +133,7 @@ const DEFAULTS = {
   ],
   "headcount": [
     {
-      "role": "Doctor Comm",
+      "role": "Doctor Per-Exam Allowance",
       "count": 1,
       "basis": "exam",
       "monthlyRate": 0,
@@ -142,7 +142,7 @@ const DEFAULTS = {
       "startMonth": 1
     },
     {
-      "role": "Optometrist Comm",
+      "role": "Optometrist Per-Exam Allowance",
       "count": 1,
       "basis": "exam",
       "monthlyRate": 0,
