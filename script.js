@@ -128,7 +128,7 @@ const DEFAULTS = {
   "fixedOverhead": [
     {
       "label": "Software maintenance/subscription",
-      "amount": 500
+      "amount": 1000
     }
   ],
   "headcount": [
@@ -219,7 +219,7 @@ const DEFAULTS = {
     "optimisticAdj": 0.3
   },
   "capital": {
-    "totalInvestment": 250000,
+    "totalInvestment": 300000,
     "capexItems": [
       {
         "label": "Equipment 1",
@@ -241,13 +241,13 @@ const DEFAULTS = {
       },
       {
         "label": "Van 1",
-        "amount": 60000,
+        "amount": 90000,
         "year": 1,
         "month": 1
       },
       {
         "label": "Van 2",
-        "amount": 60000,
+        "amount": 90000,
         "year": 1,
         "month": 7
       },
