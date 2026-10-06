@@ -40,10 +40,9 @@ const DEFAULTS = {
     "teams": 1,
     "monthActive": [
       false,
-      true,
-      true,
-      true,
-      true,
+      false,
+      false,
+      false,
       false,
       true,
       true,
@@ -57,6 +56,7 @@ const DEFAULTS = {
       true,
       true,
       false,
+      true,
       true,
       true,
       true,
@@ -139,7 +139,7 @@ const DEFAULTS = {
       "monthlyRate": 0,
       "examRate": 3.5,
       "startYear": 1,
-      "startMonth": 1
+      "startMonth": 6
     },
     {
       "role": "Optometrist Per-Exam Allowance",
@@ -148,7 +148,7 @@ const DEFAULTS = {
       "monthlyRate": 0,
       "examRate": 2,
       "startYear": 1,
-      "startMonth": 1
+      "startMonth": 6
     },
     {
       "role": "Customer Care / Ops / Scheduling",
@@ -157,7 +157,7 @@ const DEFAULTS = {
       "monthlyRate": 600,
       "examRate": 0,
       "startYear": 1,
-      "startMonth": 1
+      "startMonth": 6
     },
     {
       "role": "Doctor Fix 1",
@@ -166,7 +166,7 @@ const DEFAULTS = {
       "monthlyRate": 800,
       "examRate": 0,
       "startYear": 1,
-      "startMonth": 1
+      "startMonth": 6
     },
     {
       "role": "Optometrist Fix 1",
@@ -175,43 +175,43 @@ const DEFAULTS = {
       "monthlyRate": 500,
       "examRate": 0,
       "startYear": 1,
-      "startMonth": 1
+      "startMonth": 6
     },
     {
       "role": "Driver 1",
       "count": 1,
       "basis": "month",
-      "monthlyRate": 600,
+      "monthlyRate": 700,
       "examRate": 0,
       "startYear": 1,
-      "startMonth": 1
+      "startMonth": 6
     },
     {
       "role": "Driver 2",
       "count": 1,
       "basis": "month",
-      "monthlyRate": 300,
+      "monthlyRate": 700,
       "examRate": 0,
       "startYear": 1,
-      "startMonth": 7
+      "startMonth": 12
     },
     {
       "role": "Doctor Fix 2",
       "count": 1,
       "basis": "month",
-      "monthlyRate": 400,
+      "monthlyRate": 800,
       "examRate": 0,
       "startYear": 1,
-      "startMonth": 7
+      "startMonth": 12
     },
     {
       "role": "Optometrist Fix 2",
       "count": 1,
       "basis": "month",
-      "monthlyRate": 250,
+      "monthlyRate": 500,
       "examRate": 0,
       "startYear": 1,
-      "startMonth": 7
+      "startMonth": 12
     }
   ],
   "scenario": {
@@ -219,7 +219,7 @@ const DEFAULTS = {
     "optimisticAdj": 0.3
   },
   "capital": {
-    "totalInvestment": 300000,
+    "totalInvestment": 250000,
     "capexItems": [
       {
         "label": "Equipment 1",
@@ -249,13 +249,13 @@ const DEFAULTS = {
         "label": "Van 2",
         "amount": 65000,
         "year": 1,
-        "month": 7
+        "month": 12
       },
       {
         "label": "Equipment 2",
         "amount": 20000,
         "year": 1,
-        "month": 7
+        "month": 12
       }
     ]
   }
