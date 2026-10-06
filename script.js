@@ -241,13 +241,13 @@ const DEFAULTS = {
       },
       {
         "label": "Van 1",
-        "amount": 90000,
+        "amount": 65000,
         "year": 1,
         "month": 1
       },
       {
         "label": "Van 2",
-        "amount": 90000,
+        "amount": 65000,
         "year": 1,
         "month": 7
       },
