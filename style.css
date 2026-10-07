@@ -404,15 +404,23 @@ html, body {
 
 .dyn-table .col-share,
 .dyn-table .col-price,
-.dyn-table .col-count,
 .dyn-table .col-amount,
 .dyn-table .col-month { width: 100px; }
+
+/* Headcount "Count" is a 1–2 digit number — doesn't need a wide column */
+.dyn-table .col-count { width: 68px; }
 
 .dyn-table .col-rate { width: 150px; }
 .dyn-table .col-basis-check { width: 76px; text-align: center; }
 .dyn-table .col-basis-check input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
-.dyn-table .col-start { width: 118px; }
+.dyn-table .col-start { width: 176px; }
 .dyn-table .col-year { width: 70px; }
+/* Headcount: keep the role-name column from soaking up all the spare width
+   (leaves room for the Start Year/Month boxes) */
+.dyn-table .col-role { width: 31%; min-width: 190px; }
+/* Don't let the Headcount table stretch across very wide screens — otherwise
+   the spare width gets spread over every column (Count, Rate, ...). */
+#headcountTable { max-width: 900px; }
 
 .dyn-table .col-remove { width: 36px; text-align: center; }
 
@@ -431,16 +439,18 @@ html, body {
 .start-cell {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 5px;
 }
-.start-cell input {
-  width: 32px;
+/* extra specificity so this beats `.dyn-table input[type="number"] { width: 100% }` */
+.dyn-table .start-cell input[type="number"] {
+  width: 58px;
+  flex: 0 0 auto;
   min-width: 0;
-  padding: 6px 3px;
+  padding: 6px 4px;
   text-align: center;
 }
 .start-label {
-  font-size: 10.5px;
+  font-size: 11.5px;
   color: var(--text-muted);
   font-weight: 600;
 }
