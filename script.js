@@ -34,7 +34,7 @@ const TOTAL_MONTHS = YEARS_IN_MODEL * MONTHS_PER_YEAR;
 const DEFAULTS = {
   "volume": {
     "baseVolume": 50,
-    "quarterlyGrowth": 0.5,
+    "quarterlyGrowth": 0.4,
     "annualGrowth": 0.2,
     "capacityPerDayPerTeam": 7,
     "teams": 1,
@@ -99,6 +99,7 @@ const DEFAULTS = {
       0,
       0,
       0,
+      5000,
       10000,
       10000,
       10000,
@@ -107,12 +108,11 @@ const DEFAULTS = {
       5000,
       5000,
       5000,
-      7000,
-      7000,
-      7000,
-      7000,
-      7000,
-      7000,
+      5000,
+      5000,
+      5000,
+      5000,
+      5000,
       5000,
       5000,
       5000,
@@ -160,7 +160,7 @@ const DEFAULTS = {
       "startMonth": 6
     },
     {
-      "role": "Doctor Fix 1",
+      "role": "Doctor Fix",
       "count": 1,
       "basis": "month",
       "monthlyRate": 800,
@@ -169,7 +169,7 @@ const DEFAULTS = {
       "startMonth": 6
     },
     {
-      "role": "Optometrist Fix 1",
+      "role": "Optometrist Fix",
       "count": 1,
       "basis": "month",
       "monthlyRate": 500,
@@ -178,40 +178,13 @@ const DEFAULTS = {
       "startMonth": 6
     },
     {
-      "role": "Driver 1",
+      "role": "Driver",
       "count": 1,
       "basis": "month",
       "monthlyRate": 700,
       "examRate": 0,
       "startYear": 1,
       "startMonth": 6
-    },
-    {
-      "role": "Driver 2",
-      "count": 1,
-      "basis": "month",
-      "monthlyRate": 700,
-      "examRate": 0,
-      "startYear": 1,
-      "startMonth": 12
-    },
-    {
-      "role": "Doctor Fix 2",
-      "count": 1,
-      "basis": "month",
-      "monthlyRate": 800,
-      "examRate": 0,
-      "startYear": 1,
-      "startMonth": 12
-    },
-    {
-      "role": "Optometrist Fix 2",
-      "count": 1,
-      "basis": "month",
-      "monthlyRate": 500,
-      "examRate": 0,
-      "startYear": 1,
-      "startMonth": 12
     }
   ],
   "scenario": {
@@ -219,43 +192,19 @@ const DEFAULTS = {
     "optimisticAdj": 0.3
   },
   "capital": {
-    "totalInvestment": 250000,
+    "totalInvestment": 120000,
     "capexItems": [
       {
-        "label": "Equipment 1",
+        "label": "Equipment",
         "amount": 20000,
         "year": 1,
         "month": 1
       },
       {
-        "label": "Booking software/app — phase 1",
-        "amount": 15000,
-        "year": 1,
-        "month": 1
-      },
-      {
-        "label": "Booking software/app — phase 2",
-        "amount": 15000,
-        "year": 1,
-        "month": 7
-      },
-      {
-        "label": "Van 1",
+        "label": "Van",
         "amount": 65000,
         "year": 1,
         "month": 1
-      },
-      {
-        "label": "Van 2",
-        "amount": 65000,
-        "year": 1,
-        "month": 12
-      },
-      {
-        "label": "Equipment 2",
-        "amount": 20000,
-        "year": 1,
-        "month": 12
       }
     ]
   }
